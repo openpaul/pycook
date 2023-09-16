@@ -1,20 +1,14 @@
 import re
-from .types import (
-    Cookware,
-    Ingredient,
-    InlineComment,
-    Metadata,
-    Position,
-    Timer,
-    Units,
-    Unit,
-    RowType,
-)
-from typing import Union
+from typing import Generator, Type, TypeVar, Union
+
 from loguru import logger
 
+from .types import (Cookware, Ingredient, InlineComment, Metadata, Position,
+                    PositionEvent, PositionEventEnum, RowType, Timer, Unit,
+                    Units)
 
-def get_line_type(line: str) -> str:
+
+def get_line_type(line: str) -> RowType:
     if is_comment_line(line):
         return RowType.comment
     elif is_metadata_line(line):
@@ -31,7 +25,7 @@ def is_metadata_line(line: str) -> bool:
     return line.strip().startswith(">> ")
 
 
-def parse_metadata(line: str) -> dict[str, str]:
+def parse_metadata(line: str) -> Metadata:
     if not is_metadata_line(line):
         raise ValueError(f"Line '{line}' is not a metadata line")
     line = line[3:].strip()
@@ -41,7 +35,7 @@ def parse_metadata(line: str) -> dict[str, str]:
 
 def _load_file(filename: str) -> list[str]:
     with open(filename) as f:
-        return [line.strip() for line in f.readlines]
+        return [line.strip() for line in f.readlines()]
 
 
 def _divide_fraction(fraction: str) -> float:
@@ -69,69 +63,99 @@ def create_unit(unit_str: str, unit_value: Union[float, int] = 1.0) -> Unit:
 
 
 def parse_ingredients(cooklang_text: str) -> list[Ingredient]:
-    return parse_stuff(cooklang_text, control_char="@")
+    return [
+        x
+        for x in parse_stuff(cooklang_text, control_char=PositionEventEnum.Ingredient)
+        if isinstance(x, Ingredient)
+    ]
 
 
 def parse_cookware(cooklang_text: str) -> list[Cookware]:
-    return parse_stuff(cooklang_text, control_char="#", T=Cookware)
+    return [
+        x
+        for x in parse_stuff(cooklang_text, control_char=PositionEventEnum.Cookware)
+        if isinstance(x, Cookware)
+    ]
 
 
 def parse_timer(cooklang_text: str) -> list[Timer]:
-    return parse_stuff(cooklang_text, control_char="~", T=Timer)
+    return [
+        x
+        for x in parse_stuff(cooklang_text, control_char=PositionEventEnum.Timer)
+        if isinstance(x, Timer)
+    ]
 
 
 def parse_stuff(
     cooklang_text,
-    control_char: int = "@",
-    T: Union[Ingredient, Cookware, Timer] = Ingredient,
+    control_char: PositionEventEnum,
     rowcounter: int = 0,
-) -> list[Union[Ingredient, Cookware, Timer]]:
+) -> list[Union[Ingredient, Timer, Cookware]]:
     # Define the regex pattern to match @stuff {} and @stuff{1%kg} and @stuff @morestuff
     regex = (
         r"(?:"
-        + control_char
+        + control_char.value
         + r"((?:[\s+\w+])*)\s*\{((?:[\d\/.]+)?)%?((?:\w+))?\})|(?:"
-        + control_char
+        + control_char.value
         + r"(\w+))"
     )
-    ingredients_list = []
+
+    results = []
+    match_object: Union[Ingredient, Cookware, Timer]
     for match in re.finditer(regex, cooklang_text):
         groups = match.groups()
-        position = Position(row=rowcounter, start=match.start(), length=match.end() - match.start())
+        position = Position(
+            row=rowcounter, start=match.start(), length=match.end() - match.start()
+        )
 
+        # We matched a open ended event aka @eggs ...
         if groups[0] is None and groups[3]:
-            ingredient = T(name=groups[3], unit=None, position=position)
+            if control_char == PositionEventEnum.Ingredient:
+                match_object = Ingredient(name=groups[3], unit=None, position=position)
+            elif control_char == PositionEventEnum.Timer:
+                raise AssertionError("Timers need to have a duration")
+            elif control_char == PositionEventEnum.Cookware:
+                match_object = Cookware(name=groups[3], unit=None, position=position)
         else:
-            ingredient_name = groups[0]
+            # We matched something finished with {}
+            name = groups[0]
             quantity = groups[1] if groups[1] else None
             unit = groups[2] if groups[2] else None
+
             # parse fractions
-            if quantity is not None and "/" in quantity:
+            if isinstance(quantity, str) and "/" in quantity:
                 quantity = _divide_fraction(quantity)
-            elif quantity:
+            elif isinstance(quantity, str):
                 quantity = float(quantity) if "." in quantity else int(quantity)
 
-            if unit is not None:
+            if unit is not None and quantity is not None:
                 try:
                     parsed_unit = create_unit(unit, quantity)
                 except ValueError:
                     logger.error(f"Could not parse unit '{unit}'")
                     raise ValueError(f"Could not parse unit '{unit}'")
+            else:
+                parsed_unit = None
 
-                ingredient = T(
-                    name=ingredient_name,
-                    unit=parsed_unit,
+            if control_char == PositionEventEnum.Ingredient:
+                match_object = Ingredient(
+                    name=name, unit=parsed_unit, position=position
+                )
+            elif control_char == PositionEventEnum.Timer:
+                match_object = Timer(name=name, unit=parsed_unit, position=position)
+            elif control_char == PositionEventEnum.Cookware:
+                match_object = Cookware(
+                    name=name,
+                    unit=quantity,
                     position=position,
                 )
-            else:
-                ingredient = T(name=ingredient_name, unit=quantity, position=position)
 
-        ingredients_list.append(ingredient)
+        results.append(match_object)
 
-    return ingredients_list
+    return results
 
 
-def group_steplines(cooklang_text: list[str]) -> list[str]:
+def group_steplines(cooklang_text: list[str]) -> Generator[list[str], None, None]:
     steptext = []
     for line in cooklang_text:
         line = line.strip()
@@ -148,18 +172,14 @@ def group_steplines(cooklang_text: list[str]) -> list[str]:
         yield steptext
 
 
-def remove_control_chars(text: list[str]) -> list[str]:
-    for s in text:
-        for i, c in ["@", "#", "~"]:
-            s = s.replace(c, "")
-
-
-def parse_comments(cooklang_text: str, rowcounter: int = 0) -> list[str]:
+def parse_comments(cooklang_text: str, rowcounter: int = 0) -> list[InlineComment]:
     # Define the regex pattern to match @stuff {} and @stuff{1%kg} and @stuff @morestuff
     regex = r"\[\-\s([\w\d]*)\s\-\]"
     comments = []
     for match in re.finditer(regex, cooklang_text):
         groups = match.groups()
-        position = Position(row=rowcounter, start=match.start(), length=match.end() - match.start())
+        position = Position(
+            row=rowcounter, start=match.start(), length=match.end() - match.start()
+        )
         comments.append(InlineComment(text=groups[0], position=position))
     return comments

@@ -1,6 +1,7 @@
 from enum import Enum
 from functools import total_ordering
-from typing import Optional, Union
+from typing import Iterable, Optional, Union
+
 from pydantic import BaseModel
 
 
@@ -87,14 +88,15 @@ class Timer(PositionEvent):
         return f"{self.unit.amount} {self.unit.unit.value}"
 
 
+class PositionEventEnum(Enum):
+    Timer = "~"
+    Cookware = "#"
+    Ingredient = "@"
+
+
 class Metadata(BaseModel):
     key: str
     value: str
-
-
-class Step(BaseModel):
-    step: str
-    counter: int
 
 
 class RowType(Enum):
@@ -117,16 +119,20 @@ class TextRow(SimpleRow):
     ingredients: list[Ingredient]
     cookware: list[Cookware]
     timers: list[Timer]
-    comments: list[str]
+    comments: list[InlineComment]
 
-    def _replace_all_entryes(self, entries: Union[Ingredient, Cookware, Timer]) -> str:
+    def _replace_all_entryes(
+        self, entries: Iterable[Union[Ingredient, Cookware, Timer]]
+    ) -> str:
         sorted_entries = sorted(entries, reverse=True)
         line = self.text
         for entry in sorted_entries:
             line = self._replace_entry(line, entry)
         return line
 
-    def _replace_entry(self, line: str, entry: Union[Ingredient, Cookware, Timer]) -> str:
+    def _replace_entry(
+        self, line: str, entry: Union[Ingredient, Cookware, Timer]
+    ) -> str:
         return (
             line[: entry.position.start]
             + str(entry)

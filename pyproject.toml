@@ -12,5 +12,5 @@ dependencies = [
     
 ]
 [project.scripts]
-aioas = "aigx_oasdb.cli:main"
+pycook = "pycook.cli:main"
 

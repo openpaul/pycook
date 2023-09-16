@@ -1,13 +1,9 @@
+from typing import Optional
+
 from .types import Metadata, RowType, Step, TextRow
-from .utils import (
-    get_line_type,
-    group_steplines,
-    parse_comments,
-    parse_cookware,
-    parse_ingredients,
-    parse_metadata,
-    parse_timer,
-)
+from .utils import (get_line_type, group_steplines, parse_comments,
+                    parse_cookware, parse_ingredients, parse_metadata,
+                    parse_timer)
 
 
 class Recipe:
@@ -23,31 +19,47 @@ class Recipe:
         pass
 
     def _find_picture(
-        self, filepath: str = None, suffixes: list[str] = ["jpg", "png", "jpeg", "webp"]
+        self,
+        filepath: Optional[str] = None,
+        suffixes: list[str] = ["jpg", "png", "jpeg", "webp"],
     ):
         if filepath is None:
-            filepath = self.filepath
+            pass
         pass
 
     def _ingredients(self):
         return [
-            ingredient for step in self.steps for row in step.rows for ingredient in row.ingredients
+            ingredient
+            for step in self.steps
+            for row in step.rows
+            for ingredient in row.ingredients
+        ]
+
+    def _cookware(self):
+        return [
+            cookware
+            for step in self.steps
+            for row in step.rows
+            for cookware in row.cookware
         ]
 
     def __str__(self):
         steps = "\n\n".join([str(step) for step in self.steps])
         ingredients = "\n".join(["- " + str(x) for x in self._ingredients()])
+        cookware = "\n".join(["- " + str(x) for x in self._cookware()])
         s = f"""# {self.title}
-## Ingredients
+## :salt: Ingredients
 {ingredients}
-## Steps
+##  :cooking: Cookware
+{cookware}
+## :pencil: Instructions
 {steps}
 """
         return s
 
 
 def parse(title: str, content: list[str]) -> Recipe:
-    allsteplines = []
+    allsteplines: list[str] = []
     metadata = []
     for line in content:
         line_type = get_line_type(line)
@@ -60,7 +72,7 @@ def parse(title: str, content: list[str]) -> Recipe:
             allsteplines.append(line)
 
     # now group the steps and parse them
-    all_steps = []
+    all_steps: list[Step] = []
     for stepid, steplines in enumerate(group_steplines(allsteplines)):
         steprows = []
         for rowid, row in enumerate(steplines):

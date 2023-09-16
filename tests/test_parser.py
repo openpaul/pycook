@@ -1,7 +1,9 @@
 import os
-from pycook.utils import create_unit, parse_cookware, parse_ingredients, parse_timer
-from pycook.types import Ingredient, Position, Units, Unit
+
 from pycook.cook import Recipe, parse
+from pycook.types import Ingredient, Position, Unit, Units
+from pycook.utils import (create_unit, parse_cookware, parse_ingredients,
+                          parse_timer)
 
 
 def test_create_unit():
@@ -34,7 +36,9 @@ def test_parse_ingredients():
     cooklang_text = "@salt{}"
     ingredients = parse_ingredients(cooklang_text)
     assert len(ingredients) == 1
-    assert ingredients[0] == Ingredient(name="salt", position=Position(row=0, start=0, length=7))
+    assert ingredients[0] == Ingredient(
+        name="salt", position=Position(row=0, start=0, length=7)
+    )
 
     # Test multiple ingredients with units and amounts
     cooklang_text = """
