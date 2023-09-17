@@ -46,11 +46,11 @@ class Recipe:
         ingredients = "\n".join(["- " + str(x) for x in self._ingredients()])
         cookware = "\n".join(["- " + str(x) for x in self._cookware()])
         s = f"""# {self.title}
-{'## :salt: Ingredients' if len(cookware) > 0 else ''}
+{'## :salt: Ingredients' if len(ingredients) > 0 else ''}
 {ingredients}
 {'##  :cooking: Cookware' if len(cookware) > 0 else ''}
 {cookware}
-{'## :pencil: Instructions' if len(cookware) > 0 else ''}
+{'## :pencil: Instructions' if len(steps) > 0 else ''}
 {steps}
 """
         return s
