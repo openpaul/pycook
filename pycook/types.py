@@ -66,7 +66,7 @@ class Ingredient(PositionEvent):
         if self.unit is None:
             return self.name
         else:
-            return f"{self.unit} {self.name}{'s' if self.unit > 1 and not isinstance(self.unit, Unit) and self.name[-1] != 's' else ''}"
+            return f"{self.unit} {self.name}"
 
 
 class Cookware(PositionEvent):
@@ -77,7 +77,7 @@ class Cookware(PositionEvent):
         if self.unit is None:
             return self.name
         else:
-            return f"{self.unit} {self.name}{'s' if self.unit > 1 else ''}"
+            return f"{self.unit} {self.name}"
 
 
 class Timer(PositionEvent):

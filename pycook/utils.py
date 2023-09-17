@@ -1,3 +1,4 @@
+import os
 import re
 from typing import Generator, Type, TypeVar, Union
 
@@ -6,6 +7,9 @@ from loguru import logger
 from .types import (Cookware, Ingredient, InlineComment, Metadata, Position,
                     PositionEvent, PositionEventEnum, RowType, Timer, Unit,
                     Units)
+
+
+                
 
 
 def get_line_type(line: str) -> RowType:
@@ -111,16 +115,16 @@ def parse_stuff(
         # We matched a open ended event aka @eggs ...
         if groups[0] is None and groups[3]:
             if control_char == PositionEventEnum.Ingredient:
-                match_object = Ingredient(name=groups[3], unit=None, position=position)
+                match_object = Ingredient(name=groups[3].strip(), unit=None, position=position)
             elif control_char == PositionEventEnum.Timer:
                 raise AssertionError("Timers need to have a duration")
             elif control_char == PositionEventEnum.Cookware:
-                match_object = Cookware(name=groups[3], unit=None, position=position)
+                match_object = Cookware(name=groups[3].strip(), unit=None, position=position)
         else:
             # We matched something finished with {}
-            name = groups[0]
-            quantity = groups[1] if groups[1] else None
-            unit = groups[2] if groups[2] else None
+            name = groups[0].strip()
+            quantity = groups[1].strip() if groups[1] else None
+            unit = groups[2].strip() if groups[2] else None
 
             # parse fractions
             if isinstance(quantity, str) and "/" in quantity:
@@ -183,3 +187,23 @@ def parse_comments(cooklang_text: str, rowcounter: int = 0) -> list[InlineCommen
         )
         comments.append(InlineComment(text=groups[0], position=position))
     return comments
+
+
+
+def find_files_in_folder(folder_path, file_extension=None):
+    file_list = []
+    for root, dirs, files in os.walk(folder_path):
+        for file in files:
+            if file_extension is None or file.endswith(file_extension):
+                file_list.append(os.path.join(root, file))
+    return file_list
+
+
+
+def replace_file_suffix(file_path: str, new_suffix: str) -> str:
+    base_name = os.path.basename(file_path)
+    name, current_extension = os.path.splitext(base_name)
+    new_file_name = f"{name}{new_suffix}"
+
+    return os.path.join(os.path.dirname(file_path), new_file_name)    
+
