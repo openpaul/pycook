@@ -99,7 +99,7 @@ def parse_stuff(
     regex = (
         r"(?:"
         + control_char.value
-        + r"((?:[\s+\w+])*)\s*\{((?:[\d\/.]+)?)%?((?:\w+))?\})|(?:"
+        + r"((?:[\s+\w+_-])*)\s*\{((?:[\d\/.]+)?)%?((?:\w+))?\})|(?:"
         + control_char.value
         + r"(\w+))"
     )
@@ -111,7 +111,7 @@ def parse_stuff(
         position = Position(
             row=rowcounter, start=match.start(), length=match.end() - match.start()
         )
-
+        print(groups)
         # We matched a open ended event aka @eggs ...
         if groups[0] is None and groups[3]:
             if control_char == PositionEventEnum.Ingredient:

@@ -105,5 +105,5 @@ def test_full_parser():
 def test_egg():
     s = "Add @egg{1}, @salt, @pepper, @paprica and @bread crums{50%g}."
     recipe = parse("test", [s])
-    print(recipe.steps[0].rows[0].ingredients)
-    assert recipe.steps[0].rows[0].ingredients == ""
+    assert recipe.steps[0].rows[0].ingredients[0].unit == 1
+    assert recipe.steps[0].rows[0].ingredients[1].name == "salt"
