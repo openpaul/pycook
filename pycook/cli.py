@@ -16,9 +16,9 @@ def convert_cook_to_md(input_file, output_file):
         logger.warning("Output file name does not match input file name")
         output_file = os.path.join(output_folder, title + ".md")
 
-    if os.path.exists(output_file):
-        logger.error(f"Output {output_file} already exists")
-        raise FileExistsError("Output already exists")
+    #if os.path.exists(output_file):
+    #    logger.error(f"Output {output_file} already exists")
+    #    raise FileExistsError("Output already exists")
 
     recipe = parse(title, content)
     with open(output_file, "w") as fout:
