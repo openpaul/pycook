@@ -40,12 +40,22 @@ class Recipe:
             for row in step.rows
             for cookware in row.cookware
         ]
+    
+    def _metadata(self):
+        lines = ["---"]
+        lines.append(f"title: {self.title}")
+        for metadata in self.metadata:
+            lines.append(str(metadata))
+        lines.append("---")
+        return lines
 
     def __str__(self):
         steps = "\n\n".join([str(step) for step in self.steps])
         ingredients = "\n".join(["- " + str(x) for x in self._ingredients()])
         cookware = "\n".join(["- " + str(x) for x in self._cookware()])
-        s = f"""# {self.title}
+        metadata = "\n".join(self._metadata())
+        s = f"""{metadata}\n
+# {self.title}\n
 {'## :salt: Ingredients' if len(ingredients) > 0 else ''}
 {ingredients}
 {'##  :cooking: Cookware' if len(cookware) > 0 else ''}
