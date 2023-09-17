@@ -4,12 +4,19 @@ from typing import Generator, Type, TypeVar, Union
 
 from loguru import logger
 
-from .types import (Cookware, Ingredient, InlineComment, Metadata, Position,
-                    PositionEvent, PositionEventEnum, RowType, Timer, Unit,
-                    Units)
-
-
-                
+from .types import (
+    Cookware,
+    Ingredient,
+    InlineComment,
+    Metadata,
+    Position,
+    PositionEvent,
+    PositionEventEnum,
+    RowType,
+    Timer,
+    Unit,
+    Units,
+)
 
 
 def get_line_type(line: str) -> RowType:
@@ -108,15 +115,14 @@ def parse_stuff(
     match_object: Union[Ingredient, Cookware, Timer]
     for match in re.finditer(regex, cooklang_text):
         groups = match.groups()
-        position = Position(
-            row=rowcounter, start=match.start(), length=match.end() - match.start()
-        )
+        position = Position(row=rowcounter, start=match.start(), length=match.end() - match.start())
         # We matched a open ended event aka @eggs ...
         if groups[0] is None and groups[3]:
             if control_char == PositionEventEnum.Ingredient:
                 match_object = Ingredient(name=groups[3].strip(), unit=None, position=position)
             elif control_char == PositionEventEnum.Timer:
-                raise AssertionError("Timers need to have a duration")
+                # This can not be a timer, so we ignore it. Maybe this is just a normal word
+                continue
             elif control_char == PositionEventEnum.Cookware:
                 match_object = Cookware(name=groups[3].strip(), unit=None, position=position)
         else:
@@ -143,9 +149,7 @@ def parse_stuff(
                 parsed_unit = None
 
             if control_char == PositionEventEnum.Ingredient:
-                match_object = Ingredient(
-                    name=name, unit=parsed_unit, position=position
-                )
+                match_object = Ingredient(name=name, unit=parsed_unit, position=position)
             elif control_char == PositionEventEnum.Timer:
                 match_object = Timer(name=name, unit=parsed_unit, position=position)
             elif control_char == PositionEventEnum.Cookware:
@@ -182,12 +186,9 @@ def parse_comments(cooklang_text: str, rowcounter: int = 0) -> list[InlineCommen
     comments = []
     for match in re.finditer(regex, cooklang_text):
         groups = match.groups()
-        position = Position(
-            row=rowcounter, start=match.start(), length=match.end() - match.start()
-        )
+        position = Position(row=rowcounter, start=match.start(), length=match.end() - match.start())
         comments.append(InlineComment(text=groups[0], position=position))
     return comments
-
 
 
 def find_files_in_folder(folder_path, file_extension=None):
@@ -199,11 +200,9 @@ def find_files_in_folder(folder_path, file_extension=None):
     return file_list
 
 
-
 def replace_file_suffix(file_path: str, new_suffix: str) -> str:
     base_name = os.path.basename(file_path)
     name, current_extension = os.path.splitext(base_name)
     new_file_name = f"{name}{new_suffix}"
 
-    return os.path.join(os.path.dirname(file_path), new_file_name)    
-
+    return os.path.join(os.path.dirname(file_path), new_file_name)

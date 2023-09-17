@@ -1,4 +1,3 @@
-
 from typing import Optional
 from pycook.formatting import item_table
 
@@ -27,22 +26,14 @@ class Recipe:
         pass
 
     def _ingredients(self) -> str:
-        ingredients =  [
-            ingredient
-            for step in self.steps
-            for row in step.rows
-            for ingredient in row.ingredients
+        ingredients = [
+            ingredient for step in self.steps for row in step.rows for ingredient in row.ingredients
         ]
         return item_table(ingredients)
 
     def _cookware(self):
-        return [
-            cookware
-            for step in self.steps
-            for row in step.rows
-            for cookware in row.cookware
-        ]
-    
+        return [cookware for step in self.steps for row in step.rows for cookware in row.cookware]
+
     def _metadata(self):
         lines = ["---"]
         lines.append(f"title: {self.title}")
@@ -59,9 +50,9 @@ class Recipe:
         s = f"""
 # {self.title}\n
 {'## :salt: Ingredients' if len(ingredients) > 0 else ''}
-{ingredients}
+{ingredients}\n
 {'##  :cooking: Cookware' if len(cookware) > 0 else ''}
-{cookware}
+{cookware}\n
 {'## :pencil: Instructions' if len(steps) > 0 else ''}
 {steps}
 """
