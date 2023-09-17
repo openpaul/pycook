@@ -111,7 +111,6 @@ def parse_stuff(
         position = Position(
             row=rowcounter, start=match.start(), length=match.end() - match.start()
         )
-        print(groups)
         # We matched a open ended event aka @eggs ...
         if groups[0] is None and groups[3]:
             if control_char == PositionEventEnum.Ingredient:
