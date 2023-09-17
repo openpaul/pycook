@@ -97,7 +97,7 @@ class PositionEventEnum(Enum):
 class Metadata(BaseModel):
     key: str
     value: str
-    
+
     def __str__(self):
         return f"{self.key}: {self.value}"
 

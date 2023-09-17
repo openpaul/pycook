@@ -138,6 +138,8 @@ def parse_stuff(
                 except ValueError:
                     logger.error(f"Could not parse unit '{unit}'")
                     raise ValueError(f"Could not parse unit '{unit}'")
+            elif quantity is not None:
+                parsed_unit = quantity
             else:
                 parsed_unit = None
 
@@ -153,7 +155,6 @@ def parse_stuff(
                     unit=quantity,
                     position=position,
                 )
-
         results.append(match_object)
 
     return results

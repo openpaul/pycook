@@ -101,3 +101,9 @@ def test_full_parser():
         str(steps[0].rows[0])
         == "Make 6 pizza balls using 820 g tipo zero flour, 533 ml water, 24.6 g salt and 1.6 g fresh yeast. Put in a fridge for 2 days."
     )
+
+def test_egg():
+    s = "Add @egg{1}, @salt, @pepper, @paprica and @bread crums{50%g}."
+    recipe = parse("test", [s])
+    print(recipe.steps[0].rows[0].ingredients)
+    assert recipe.steps[0].rows[0].ingredients == ""
