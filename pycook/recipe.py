@@ -56,7 +56,7 @@ class Recipe:
         ingredients = self._ingredients()
         cookware = "\n".join(["- " + str(x) for x in self._cookware()])
         metadata = "\n".join(self._metadata())
-        s = f"""{metadata}\n
+        s = f"""
 # {self.title}\n
 {'## :salt: Ingredients' if len(ingredients) > 0 else ''}
 {ingredients}
