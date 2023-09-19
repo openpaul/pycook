@@ -1,5 +1,6 @@
 import argparse
 import os
+import shutil
 
 from loguru import logger
 
@@ -21,8 +22,22 @@ def convert_cook_to_md(input_file, output_file):
     #    raise FileExistsError("Output already exists")
 
     recipe = parse(title, content)
+    recipe.filepath = input_file
+
+    # see if we can find the picture for it
+    recipe._find_picture()
+    
+    # copy and adjust image
+    if recipe.image is not None:   
+        image_target = os.path.join(output_folder, os.path.basename(recipe.image))    
+        if os.path.exists(image_target):
+            os.remove(image_target)
+        shutil.copy(recipe.image, image_target)
+        recipe.image = os.path.basename(image_target)
+
     with open(output_file, "w") as fout:
         fout.writelines(str(recipe))
+
     logger.info(f"Wrote recipe to {output_file}")
 
 
@@ -46,7 +61,7 @@ def main():
         logger.info(f"Created folder {output_folder}")
 
 
-    for file in find_files_in_folder(input_folder):
+    for file in find_files_in_folder(input_folder, file_extension= ".cook"):
         file_location = replace_file_suffix(file, ".md")
         file_location = file_location[len(input_folder):]
         if file_location.startswith("/"):

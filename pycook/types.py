@@ -27,6 +27,7 @@ class Units(Enum):
     clove = "clove"
     leave = "leave"
     pack = "pack"
+    pod = "pod"
 
 
 @total_ordering
@@ -102,7 +103,6 @@ class Metadata(BaseModel):
         return f"{self.key}: {self.value}"
 
 
-
 class RowType(Enum):
     metadata = "metadata"
     comment = "comment"
@@ -125,18 +125,14 @@ class TextRow(SimpleRow):
     timers: list[Timer]
     comments: list[InlineComment]
 
-    def _replace_all_entryes(
-        self, entries: Iterable[Union[Ingredient, Cookware, Timer]]
-    ) -> str:
+    def _replace_all_entryes(self, entries: Iterable[Union[Ingredient, Cookware, Timer]]) -> str:
         sorted_entries = sorted(entries, reverse=True)
         line = self.text
         for entry in sorted_entries:
             line = self._replace_entry(line, entry)
         return line
 
-    def _replace_entry(
-        self, line: str, entry: Union[Ingredient, Cookware, Timer]
-    ) -> str:
+    def _replace_entry(self, line: str, entry: Union[Ingredient, Cookware, Timer]) -> str:
         return (
             line[: entry.position.start]
             + str(entry)

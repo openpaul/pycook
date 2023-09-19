@@ -12,4 +12,5 @@ from .utils import (get_line_type, group_steplines, parse_comments,
 
 def parse(title: str, content: list[str]) -> Recipe:
     content = parse_includes(content)
-    return parse_single_cook(title, content)
+    recipe = parse_single_cook(title, content)
+    return recipe
