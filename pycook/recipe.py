@@ -52,11 +52,16 @@ class Recipe:
         return lines
 
     def __str__(self):
+        
         steps = "\n\n".join([str(step) for step in self.steps])
+        image = f"![{self.title}]({self.image}){{ loading=lazy }}"
+
+        if len(self.steps) == 0:
+            return f"# {self.title}\n{image if self.image is not None else ''}\n"
+        
         ingredients = self._ingredients()
         cookware = "\n".join(["- " + str(x) for x in self._cookware()])
         metadata = "\n".join(self._metadata())
-        image = f"![{self.title}]({self.image}){{ loading=lazy }}"
         s = f"""
 # {self.title}\n
 {image if self.image is not None else ''}
