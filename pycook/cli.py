@@ -9,6 +9,7 @@ from .utils import _load_file, find_files_in_folder, replace_file_suffix
 
 
 def convert_cook_to_md(input_file, output_file):
+    logger.info(f"Processing: {input_file}")
     output_folder = os.path.dirname(output_file)
     content = _load_file(input_file)
     title = os.path.basename(input_file).rsplit(".", 1)[0]
@@ -50,7 +51,6 @@ def main():
 
     input_folder = args.input
     output_folder = args.output
-
     if not os.path.exists(input_folder):
         logger.error("Input not found")
         raise FileNotFoundError(f"Folder not found: {input_folder}")
