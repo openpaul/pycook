@@ -1,7 +1,5 @@
-
 from pycook.parser import parse_includes, parse_single_cook
 from pycook.recipe import Recipe
-
 
 
 def parse(title: str, content: list[str]) -> Recipe:

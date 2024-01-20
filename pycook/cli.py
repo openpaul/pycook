@@ -42,24 +42,7 @@ def convert_cook_to_md(input_file, output_file):
     logger.info(f"Wrote recipe to {output_file}")
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Convert folder of .cook file to .md or .tex files."
-    )
-    parser.add_argument("-i", "--input", help="Input folder of cook files")
-    parser.add_argument("-o", "--output", help="Output folder")
-    parser.add_argument(
-        "-f",
-        "--format",
-        help="What output format to use (default: md)",
-        default="md",
-        type="str",
-    )
-
-    args = parser.parse_args()
-
-    input_folder = args.input
-    output_folder = args.output
+def convert_folder_to_md(input_folder: str, output_folder: str):
     if not os.path.exists(input_folder):
         logger.error("Input not found")
         raise FileNotFoundError(f"Folder not found: {input_folder}")
@@ -80,6 +63,33 @@ def main():
         if not os.path.exists(file_output_folder):
             os.makedirs(file_output_folder)
         convert_cook_to_md(input_file=file, output_file=output_file)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Convert folder of .cook file to .md or .tex files."
+    )
+    parser.add_argument("-i", "--input", help="Input folder of cook files")
+    parser.add_argument("-o", "--output", help="Output folder")
+    parser.add_argument(
+        "-f",
+        "--format",
+        help="What output format to use (default: md)",
+        default="md",
+        type="str",
+    )
+
+    args = parser.parse_args()
+
+    if args.format == "md":
+        logger.info("Converting to markdown")
+        convert_folder_to_md(args.input, args.output)
+    elif args.format == "tex":
+        logger.info("Converting to tex")
+    else:
+        raise NotImplementedError(
+            f"Requested format not implemented: {args.format}. Choose 'md' or 'tex'."
+        )
 
 
 if __name__ == "__main__":
