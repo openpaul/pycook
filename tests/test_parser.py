@@ -2,8 +2,7 @@ import os
 
 from pycook.cook import Recipe, parse
 from pycook.types import Ingredient, Position, Unit, Units
-from pycook.utils import (create_unit, parse_cookware, parse_ingredients,
-                          parse_timer)
+from pycook.utils import create_unit, parse_cookware, parse_ingredients, parse_timer
 
 
 def test_create_unit():
@@ -80,9 +79,9 @@ Mash the potatoes with a #potato masher{}."""
     cookware = parse_cookware(text)
     assert len(cookware) == 2
     assert cookware[0].name == "pot"
-    assert cookware[0].unit == None
+    assert cookware[0].unit is None
     assert cookware[1].name == "potato masher"
-    assert cookware[1].unit == None
+    assert cookware[1].unit is None
 
 
 def test_full_parser():
@@ -101,6 +100,7 @@ def test_full_parser():
         str(steps[0].rows[0])
         == "Make 6 pizza balls using 820 g tipo zero flour, 533 ml water, 24.6 g salt and 1.6 g fresh yeast. Put in a fridge for 2 days."
     )
+
 
 def test_egg():
     s = "Add @egg{1}, @salt, @pepper, @paprica and @bread crums{50%g}."

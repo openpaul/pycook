@@ -18,7 +18,7 @@ def convert_cook_to_md(input_file, output_file):
         logger.warning("Output file name does not match input file name")
         output_file = os.path.join(output_folder, title + ".md")
 
-    #if os.path.exists(output_file):
+    # if os.path.exists(output_file):
     #    logger.error(f"Output {output_file} already exists")
     #    raise FileExistsError("Output already exists")
 
@@ -27,10 +27,10 @@ def convert_cook_to_md(input_file, output_file):
 
     # see if we can find the picture for it
     recipe._find_picture()
-    
+
     # copy and adjust image
-    if recipe.image is not None:   
-        image_target = os.path.join(output_folder, os.path.basename(recipe.image))    
+    if recipe.image is not None:
+        image_target = os.path.join(output_folder, os.path.basename(recipe.image))
         if os.path.exists(image_target):
             os.remove(image_target)
         shutil.copy(recipe.image, image_target)
@@ -43,9 +43,18 @@ def convert_cook_to_md(input_file, output_file):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Convert .cook file to .md file")
-    parser.add_argument("-i", "--input", help="Input folde of cook files")
-    parser.add_argument("-o", "--output", help="Output folder to markdown files")
+    parser = argparse.ArgumentParser(
+        description="Convert folder of .cook file to .md or .tex files."
+    )
+    parser.add_argument("-i", "--input", help="Input folder of cook files")
+    parser.add_argument("-o", "--output", help="Output folder")
+    parser.add_argument(
+        "-f",
+        "--format",
+        help="What output format to use (default: md)",
+        default="md",
+        type="str",
+    )
 
     args = parser.parse_args()
 
@@ -60,14 +69,13 @@ def main():
         os.makedirs(output_folder)
         logger.info(f"Created folder {output_folder}")
 
-
-    for file in find_files_in_folder(input_folder, file_extension= ".cook"):
+    for file in find_files_in_folder(input_folder, file_extension=".cook"):
         file_location = replace_file_suffix(file, ".md")
-        file_location = file_location[len(input_folder):]
+        file_location = file_location[len(input_folder) :]
         if file_location.startswith("/"):
             file_location = file_location[1:]
         output_file = os.path.join(output_folder, file_location)
-        
+
         file_output_folder = os.path.dirname(output_file)
         if not os.path.exists(file_output_folder):
             os.makedirs(file_output_folder)

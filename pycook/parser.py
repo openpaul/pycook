@@ -1,10 +1,19 @@
-
-
 import os
+
 from loguru import logger
+
 from pycook.recipe import Recipe
 from pycook.types import RowType, Step, TextRow
-from pycook.utils import _load_file, get_line_type, group_steplines, parse_comments, parse_cookware, parse_ingredients, parse_metadata, parse_timer
+from pycook.utils import (
+    _load_file,
+    get_line_type,
+    group_steplines,
+    parse_comments,
+    parse_cookware,
+    parse_ingredients,
+    parse_metadata,
+    parse_timer,
+)
 
 
 def parse_single_cook(title: str, content: list[str]) -> Recipe:
@@ -37,7 +46,6 @@ def parse_single_cook(title: str, content: list[str]) -> Recipe:
             steprows.append(r)
         all_steps.append(Step(id=stepid, rows=steprows))
     return Recipe(title=title, metadata=metadata, steps=all_steps)
-
 
 
 def parse_includes(lines: list[str]) -> list[str]:
@@ -78,7 +86,7 @@ def parse_includes(lines: list[str]) -> list[str]:
     return return_lines
 
 
-def reduce_headers(content: str, prefix: str="#")-> list[str]:
+def reduce_headers(content: str, prefix: str = "#") -> list[str]:
     result = []
     for line in content.split("\n"):
         if line.startswith("#"):
