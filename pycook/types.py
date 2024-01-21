@@ -69,6 +69,15 @@ class Ingredient(PositionEvent):
         else:
             return f"{self.unit} {self.name}"
 
+    def to_tex(self):
+        # \ingredient[250]{g}{eggs}
+        if self.unit is None:
+            return f"\\ingredient[]{{}}{{{self.name}}}"
+        elif isinstance(self.unit, Unit):
+            return f"\\ingredient[{self.unit.amount}]{{{self.unit.unit.value}}}{{{self.name}}}"
+        else:
+            return f"\\ingredient[{self.unit}]{{}}{{{self.name}}}"
+
 
 class Cookware(PositionEvent):
     name: str

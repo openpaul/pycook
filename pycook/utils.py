@@ -206,6 +206,9 @@ def find_files_in_folder(folder_path, file_extension=None):
         for file in files:
             if file_extension is None or file.endswith(file_extension):
                 file_list.append(os.path.join(root, file))
+    # sort the files alphabetically
+    file_list.sort()
+
     return file_list
 
 
@@ -215,3 +218,16 @@ def replace_file_suffix(file_path: str, new_suffix: str) -> str:
     new_file_name = f"{name}{new_suffix}"
 
     return os.path.join(os.path.dirname(file_path), new_file_name)
+
+
+def load_tex_assets() -> list[str]:
+    # function loading tex header and footer files
+    # list all files *tex in folder assets
+    folder_path = os.path.dirname(__file__)
+    all_tex_files = find_files_in_folder(os.path.join(folder_path, "assets"), ".tex")
+    text_contens = []
+    logger.debug(f"Found {len(all_tex_files)} tex files")
+    for tex_file in all_tex_files:
+        with open(tex_file) as f:
+            text_contens.append(f.read())
+    return text_contens

@@ -8,8 +8,9 @@ authors = [
 requires-python = ">=3.10"
 
 dependencies = [
-    "loguru","pydantic"
-    
+    "loguru","pydantic", 
+    "markdown==3.4.1",
+    "markdown2latex @ git+https://github.com/openpaul/markdown2latex.git@fixes"    
 ]
 [project.scripts]
 pycook = "pycook.cli:main"

@@ -1,5 +1,9 @@
 import os
+import re
 from typing import Optional
+
+import markdown
+from mdx_latex import LaTeXExtension
 
 from pycook.formatting import item_table
 from pycook.types import Metadata, Step
@@ -87,3 +91,65 @@ class Recipe:
 {steps}
 """
         return s
+
+    def to_tex(self):
+        return TexRecipe(
+            title=self.title,
+            metadata=self.metadata,
+            steps=self.steps,
+            filepath=self.filepath,
+        )
+
+
+class TexRecipe(Recipe):
+    def step_to_tex(self, step: Step):
+        # \ingredient[250]{g}{eggs}
+        ingredients = []
+        for row in step.rows:
+            for ingredient in row.ingredients:
+                ingredients.append(ingredient.to_tex())
+        ingredients = "\n".join(ingredients)
+
+        # make text nice
+        # step_text = self._replace_chars(str(step))
+        # step_text = self._replace_md_headers(step_text)
+
+        step_text = markdown.markdown(str(step), extensions=[LaTeXExtension()])
+
+        if len(ingredients) > 0:
+            # now we only need the step as text:
+            return f"""\n{ingredients}\n{step_text}\n\n"""
+        else:
+            return f"""\n\\freeform\n{step_text}\n\n"""
+
+    def __str__(self):
+        # lets add a title
+        title = "\\begin{recipe}{" + self.title + "}{}{}"
+
+        text = [self.step_to_tex(step) for step in self.steps]
+
+        closing = "\\end{recipe}"
+
+        return "\n".join([title] + text + [closing])
+
+    @staticmethod
+    def _replace_chars(text: str) -> str:
+        # replace certain strings with the tex version
+        replaceme = {"&deg;": "$^{\circ}$"}
+        for key, value in replaceme.items():
+            text = text.replace(key, value)
+        return text
+
+    @staticmethod
+    def _replace_md_headers(text: str) -> str:
+        # replace # with \section*{#}
+        new_lines = []
+        header_regex = r"^#{1,6}\s(.+)"
+        for line in text.split("\n"):
+            if re.match(header_regex, line):
+                # we have a header
+                header = re.match(header_regex, line).groups()[0]
+                new_lines.append(f"\\section*{{{header.strip()}}}")
+            else:
+                new_lines.append(line)
+        return "\n".join(new_lines)
