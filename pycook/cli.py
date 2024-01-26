@@ -84,8 +84,6 @@ def convert_folder_to_tex(input_folder: str, output_folder: str):
                 fout.writelines(f"{line}\n")
                 if line == "%% RECIPE":
                     fout.writelines(recipe_text)
-                else:
-                    print(line, line == "%% RECIPE")
 
 
 def main():

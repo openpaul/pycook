@@ -131,11 +131,11 @@ class TexRecipe(Recipe):
         # replace &deg; with latexs version: $^{\circ}$
         step_text = self._replace_chars(step_text)
 
-        if len(ingredients) > 0:
-            # now we only need the step as text:
-            return f"""\n{ingredients}\n{step_text}\n\n"""
-        else:
-            return f"""\n\\freeform\n{step_text}\n\n"""
+        # if len(ingredients) > 0:
+        #    # now we only need the step as text:
+        return f"""\n{ingredients}\n{step_text}\n\n"""
+        # else:
+        #    return f"""\n\\freeform\n{step_text}\n\n"""
 
     def __str__(self):
         # lets add a title
@@ -157,7 +157,7 @@ class TexRecipe(Recipe):
     @staticmethod
     def _replace_chars(text: str) -> str:
         # replace certain strings with the tex version
-        replaceme = {"&deg;": "$^{\circ}$"}
+        replaceme = {"&deg;": "$^{\\circ}$", "section{": "section*{"}
         for key, value in replaceme.items():
             text = text.replace(key, value)
         return text
