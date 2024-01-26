@@ -110,7 +110,7 @@ class TexRecipe(Recipe):
                 ingredients.append(ingredient.to_tex())
         ingredients = "\n".join(ingredients)
 
-        step_text = markdown.markdown(str(step), extensions=[LaTeXExtension()])
+        step_text = markdown.markdown(step.to_tex(), extensions=[LaTeXExtension()])
 
         # replace &deg; with latexs version: $^{\circ}$
         step_text = self._replace_chars(step_text)

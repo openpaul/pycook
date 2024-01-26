@@ -135,25 +135,36 @@ class TextRow(SimpleRow):
     comments: list[InlineComment]
 
     def _replace_all_entryes(
-        self, entries: Iterable[Union[Ingredient, Cookware, Timer]]
+        self, entries: Iterable[Union[Ingredient, Cookware, Timer]], bold: bool = False
     ) -> str:
         sorted_entries = sorted(entries, reverse=True)
         line = self.text
         for entry in sorted_entries:
-            line = self._replace_entry(line, entry)
+            line = self._replace_entry(
+                line, entry, bold=bold and isinstance(entry, Ingredient)
+            )
         return line
 
     def _replace_entry(
-        self, line: str, entry: Union[Ingredient, Cookware, Timer]
+        self, line: str, entry: Union[Ingredient, Cookware, Timer], bold: bool = False
     ) -> str:
+        bold_chars = "**" if bold else ""
+
         return (
             line[: entry.position.start]
+            + bold_chars
             + str(entry)
+            + bold_chars
             + line[entry.position.start + entry.position.length :]
         )
 
     def __str__(self):
         return self._replace_all_entryes(self.ingredients + self.cookware + self.timers)
+
+    def to_tex(self):
+        return self._replace_all_entryes(
+            self.ingredients + self.cookware + self.timers, bold=True
+        )
 
 
 class Step(BaseModel):
@@ -162,3 +173,6 @@ class Step(BaseModel):
 
     def __str__(self):
         return "\n".join([str(row) for row in self.rows])
+
+    def to_tex(self):
+        return "\n".join([row.to_tex() for row in self.rows])
