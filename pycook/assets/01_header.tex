@@ -1,19 +1,26 @@
-\documentclass[a5paper, landscape, 13pt]{scrartcl}
+\documentclass[a5paper, landscape, 11pt]{scrartcl}
 
+\usepackage{graphicx}
 \usepackage{fontspec}
 \usepackage{geometry}
 \usepackage{xcolor}
 \usepackage{siunitx}
+\usepackage{float}
+\usepackage[export]{adjustbox}
+
+% font change
+\usepackage[default]{raleway}
 
 % Cuisine settings
 \usepackage[nonumber]{cuisine}
-\RecipeWidths{1\textwidth}{0.25\linewidth}{0.6em}{4em}{2.5em}{0.9em}
-
+\RecipeWidths{1.24\textwidth}{0.25\linewidth}{.8em}{9em}{2.5em}{1.6em}
+\renewcommand*{\recipetitlefont}{\large\bfseries\sffamily}
+\renewcommand*{\recipestepnumberfont}{\small\bfseries\sffamily}
 
 % Adjust margins for all sides individually
 \geometry{
-	left=1.5cm,
-	right=1.5cm,
+	left=1.25cm,
+	right=1.25cm,
 	top=1cm,
 	bottom=1cm,
 }

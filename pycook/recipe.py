@@ -110,11 +110,10 @@ class TexRecipe(Recipe):
                 ingredients.append(ingredient.to_tex())
         ingredients = "\n".join(ingredients)
 
-        # make text nice
-        # step_text = self._replace_chars(str(step))
-        # step_text = self._replace_md_headers(step_text)
-
         step_text = markdown.markdown(str(step), extensions=[LaTeXExtension()])
+
+        # replace &deg; with latexs version: $^{\circ}$
+        step_text = self._replace_chars(step_text)
 
         if len(ingredients) > 0:
             # now we only need the step as text:
@@ -128,7 +127,7 @@ class TexRecipe(Recipe):
 
         text = [self.step_to_tex(step) for step in self.steps]
 
-        closing = "\\end{recipe}"
+        closing = "\\end{recipe}\\cleardoublepage"
 
         return "\n".join([title] + text + [closing])
 
