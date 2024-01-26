@@ -87,11 +87,6 @@ def convert_folder_to_tex(input_folder: str, output_folder: str):
                 else:
                     print(line, line == "%% RECIPE")
 
-    # copy all images (webp) to the output folder
-    for file in find_files_in_folder(input_folder, file_extension=".webp"):
-        output_file = os.path.join(output_folder, os.path.basename(file))
-        shutil.copy(file, output_file)
-
 
 def main():
     parser = argparse.ArgumentParser(

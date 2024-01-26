@@ -14,4 +14,6 @@ def parse(title: str, content: list[str]) -> Recipe:
 def parse_file(filepath: str) -> Recipe:
     content = _load_file(filepath)
     title = os.path.basename(filepath).rsplit(".", 1)[0]
-    return parse(title, content)
+    recipe = parse(title, content)
+    recipe.filepath = filepath
+    return recipe

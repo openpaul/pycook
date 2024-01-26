@@ -6,7 +6,10 @@ import markdown
 from mdx_latex import LaTeXExtension
 
 from pycook.formatting import item_table
+from pycook.utils import git_get_last_change
 from pycook.types import Metadata, Step
+
+FILEPATH = os.path.abspath(__file__)
 
 
 class Recipe:
@@ -25,6 +28,19 @@ class Recipe:
         self.steps = steps
         self.filepath = filepath
         self.image = None
+        self._date = None
+
+    def _get_edit_date(self):
+        if self.filepath is None:
+            return None
+        return git_get_last_change(self.filepath, self.filepath)
+
+    @property
+    def date(self):
+        if self._date is None:
+            self._date = self._get_edit_date()
+
+        return self._date
 
     def _load(self, filepath: str):
         pass
@@ -123,13 +139,20 @@ class TexRecipe(Recipe):
 
     def __str__(self):
         # lets add a title
-        title = "\\begin{recipe}{" + self.title + "}{}{}"
+        title = "\\begin{recipe}{" + self.title + "}{" + self.formated_date + "}{}"
 
         text = [self.step_to_tex(step) for step in self.steps]
 
         closing = "\\end{recipe}\\cleardoublepage"
 
         return "\n".join([title] + text + [closing])
+
+    @property
+    def formated_date(self) -> str:
+        if self.date is None:
+            return ""
+        else:
+            return self.date.strftime("%d.%m.%Y")
 
     @staticmethod
     def _replace_chars(text: str) -> str:

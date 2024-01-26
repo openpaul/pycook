@@ -1,6 +1,9 @@
+import datetime
 import os
 import re
 from typing import Generator, Union
+
+import git
 
 from loguru import logger
 
@@ -231,3 +234,27 @@ def load_tex_assets() -> list[str]:
         with open(tex_file) as f:
             text_contens.append(f.read())
     return text_contens
+
+
+def find_git_parent_of_file(path: str) -> str:
+    # function to determine parent git repo of a file
+    # https://stackoverflow.com/questions/957928/is-there-a-way-to-get-the-git-root-directory-in-one-command
+    return git.Repo(path, search_parent_directories=True).working_tree_dir
+
+
+def find_git_path_of_file(path: str) -> str:
+    # function to determine the path of a file in a git repo
+    git_repo = os.path.abspath(find_git_parent_of_file(path))
+    path = os.path.abspath(path)
+    return path[len(git_repo) + 1 :]
+
+
+def git_get_last_change(git_location: str, filepath: str) -> datetime.datetime:
+    # function to get the last change of a file in a git repo
+    git_location = find_git_parent_of_file(git_location)
+    filepath = find_git_path_of_file(filepath)
+
+    repo = git.Repo(git_location)
+    file_log = repo.git.log(filepath, max_count=1, date="short")
+    date = file_log.splitlines()[2].split("Date:")[1].strip()
+    return datetime.datetime.strptime(date, "%Y-%m-%d")
