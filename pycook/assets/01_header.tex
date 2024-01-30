@@ -13,9 +13,36 @@
 
 % Cuisine settings
 \usepackage[nonumber]{cuisine}
-\RecipeWidths{1.24\textwidth}{0.25\linewidth}{.8em}{9em}{2.5em}{1.6em}
+\RecipeWidths{1.24\textwidth}{0.25\linewidth}{1.2em}{9em}{2.5em}{1.6em}
 \renewcommand*{\recipetitlefont}{\large\bfseries\sffamily}
-\renewcommand*{\recipestepnumberfont}{\small\bfseries\sffamily}
+\renewcommand*{\recipestepnumberfont}{\tiny\bfseries\sffamily}
+
+
+
+\usepackage{tikz}
+
+% Define a command to add a circle around the step number
+\newcommand{\AddCircleAroundStepNumber}{%
+	\tikz[baseline=(char.base)]{
+		\node[draw, circle, inner sep=0.11em, line width=0.12em ] (char) {\arabic{st@pnumber}};
+	}%
+}
+
+% Override the DisplayStep macro to include the circle around the step number
+\makeatletter
+\renewcommand{\Displ@ySt@p}{%
+	\stepcounter{st@pnumber}%
+	\makebox[\R@cipeWidth]{%
+		\makebox[\St@pNumberWidth][l]{
+			%\recipestepnumberfont\AddCircleAroundStepNumber
+			\recipestepnumberfont\raisebox{0.3em}{\AddCircleAroundStepNumber}%
+		}%
+		\usebox{\st@pingrbox}%
+		\usebox{\st@pmethodbox}%
+	}%
+	\savebox{\st@pingrbox}[\R@cipeIQUWidth]{}%
+}
+\makeatother
 
 % Adjust margins for all sides individually
 \geometry{

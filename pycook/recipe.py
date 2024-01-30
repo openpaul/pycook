@@ -139,11 +139,11 @@ class TexRecipe(Recipe):
 
     def __str__(self):
         # lets add a title
-        title = "\\begin{recipe}{" + self.title + "}{" + self.formated_date + "}{}"
+        title = "\n\\begin{recipe}{" + self.title + "}{" + self.formated_date + "}{}"
 
         text = [self.step_to_tex(step) for step in self.steps]
 
-        closing = "\\end{recipe}\\cleardoublepage"
+        closing = "\\end{recipe}\n\\cleardoublepage\n\n"
 
         return "\n".join([title] + text + [closing])
 
