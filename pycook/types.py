@@ -134,7 +134,7 @@ class TextRow(SimpleRow):
     timers: list[Timer]
     comments: list[InlineComment]
 
-    def _replace_all_entryes(
+    def _replace_all_entries(
         self, entries: Iterable[Union[Ingredient, Cookware, Timer]], bold: bool = False
     ) -> str:
         sorted_entries = sorted(entries, reverse=True)
@@ -159,12 +159,12 @@ class TextRow(SimpleRow):
         )
 
     def __str__(self):
-        return self._replace_all_entryes(
+        return self._replace_all_entries(
             self.ingredients + self.cookware + self.timers, bold=True
         )
 
     def to_tex(self):
-        return self._replace_all_entryes(
+        return self._replace_all_entries(
             self.ingredients + self.cookware + self.timers, bold=True
         )
 
