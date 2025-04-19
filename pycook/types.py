@@ -159,7 +159,9 @@ class TextRow(SimpleRow):
         )
 
     def __str__(self):
-        return self._replace_all_entryes(self.ingredients + self.cookware + self.timers)
+        return self._replace_all_entryes(
+            self.ingredients + self.cookware + self.timers, bold=True
+        )
 
     def to_tex(self):
         return self._replace_all_entryes(
