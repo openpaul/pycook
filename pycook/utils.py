@@ -256,5 +256,9 @@ def git_get_last_change(git_location: str, filepath: str) -> datetime.datetime:
 
     repo = git.Repo(git_location)
     file_log = repo.git.log(filepath, max_count=1, date="short")
-    date = file_log.splitlines()[2].split("Date:")[1].strip()
-    return datetime.datetime.strptime(date, "%Y-%m-%d")
+    if not file_log:
+        logger.warning(f"File {filepath} not found in git repo")
+        return datetime.datetime.now()
+    else:
+        date = file_log.splitlines()[2].split("Date:")[1].strip()
+        return datetime.datetime.strptime(date, "%Y-%m-%d")
