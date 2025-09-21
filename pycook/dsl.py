@@ -512,7 +512,7 @@ class CooklangParser:
         # Improved regex patterns for parsing different elements
         # Better ingredient pattern that handles complex names and quantities
         self.ingredient_pattern = re.compile(
-            r"(?:@(?P<ingredient>[\w\s]+){(?P<amount>[\d.\/]+)?%*(?P<unit>[A-Za-z]+)?}(?:\((?P<shorthand>[\w\s]+)\))?)|(?:@(?P<simple>\w+))"
+            r"(?:@(?P<ingredient>[\w\s\\/\\-]+){(?P<amount>[\d.\/]+)?%*(?P<unit>[A-Za-z]+)?}(?:\((?P<shorthand>[\w\s]+)\))?)|(?:@(?P<simple>\w+))"
         )
         self.cookware_pattern = re.compile(r"#(?P<item>[\w\s]+)(?:\{([^}]*)\})?")
         self.timer_pattern = re.compile(

@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-
+import pytest
 from pycook.dsl import CooklangParser, Recipe, Step, read_cook
 
 simple_recipe = Path(
@@ -41,12 +41,34 @@ def test_steps():
     assert recipe.steps[0].text == "A step,\nthe same step."
 
 
-def test_ingredient_match():
-    text = "Mash @potato{2%kg} until smooth -- alternatively, boil 'em first, then mash 'em, then stick 'em in a stew."
+@pytest.mark.parametrize(
+    "text, expected_ingredients",
+    [
+        (
+            "Mash @potato{2%kg} until smooth -- alternatively, boil 'em first, then mash 'em, then stick 'em in a stew.",
+            ["potato"],
+        ),
+        ("@unbleached all-purpose flour{26%g}", ["unbleached all-purpose flour"]),
+        (
+            "@all-purpose flour/normal flour{26%g}",
+            ["all-purpose flour/normal flour"],
+        ),
+        ("@pepper and salt", ["pepper"]),
+        ("@black pepper{}", ["black pepper"]),
+        ("@black pepper{} and @salt.", ["black pepper", "salt"]),
+        ("@black pepper{} and @salt and nothing else", ["black pepper", "salt"]),
+        ("@black pepper{1} and @salt and nothing else", ["black pepper", "salt"]),
+        ("@black pepper{1%g} and @salt and nothing else", ["black pepper", "salt"]),
+        ("@black pepper{1%g} and @salt{} and nothing else", ["black pepper", "salt"]),
+        ("@black pepper{1%g} and @salt{1} and nothing else", ["black pepper", "salt"]),
+    ],
+)
+def test_ingredient_match(text, expected_ingredients):
     parser = CooklangParser()
     recipe = parser.parse(text)
-    assert len(recipe.ingredients) == 1
-    assert recipe.ingredients[0].name == "potato"
+    assert len(recipe.ingredients) == len(expected_ingredients)
+    for ing, expected in zip(recipe.ingredients, expected_ingredients):
+        assert ing.name == expected
 
 
 def test_full_recipe_features():
