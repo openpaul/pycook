@@ -1,7 +1,7 @@
+import datetime
 import os
 
 from pycook.utils import find_git_parent_of_file, git_get_last_change
-import datetime
 
 
 def test_git_get_last_change():

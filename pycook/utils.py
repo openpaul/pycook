@@ -4,7 +4,6 @@ import re
 from typing import Generator, Union
 
 import git
-
 from loguru import logger
 
 from .types import (

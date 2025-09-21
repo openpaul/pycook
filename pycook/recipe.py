@@ -6,8 +6,8 @@ import markdown
 from mdx_latex import LaTeXExtension
 
 from pycook.formatting import item_table
-from pycook.utils import git_get_last_change
 from pycook.types import Metadata, Step
+from pycook.utils import git_get_last_change
 
 FILEPATH = os.path.abspath(__file__)
 
@@ -98,12 +98,12 @@ class Recipe:
         _metadata = "\n".join(self._metadata())
         s = f"""
 # {self.title}\n
-{image if self.image is not None else ''}
-{'## :salt: Ingredients' if len(ingredients) > 0 else ''}
+{image if self.image is not None else ""}
+{"## :salt: Ingredients" if len(ingredients) > 0 else ""}
 {ingredients}\n
-{'##  :cooking: Cookware' if len(cookware) > 0 else ''}
+{"##  :cooking: Cookware" if len(cookware) > 0 else ""}
 {cookware}\n
-{'## :pencil: Instructions' if len(steps) > 0 else ''}
+{"## :pencil: Instructions" if len(steps) > 0 else ""}
 {steps}
 """
         return s

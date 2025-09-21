@@ -16,3 +16,13 @@ dependencies = [
 [project.scripts]
 pycook = "pycook.cli:main"
 
+
+
+[project.optional-dependencies]
+
+# Development dependencies (full + testing tools + docs)
+dev = [
+    "pytest",
+    "ruff",
+    "pre-commit",
+]
