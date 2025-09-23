@@ -61,6 +61,7 @@ def test_steps():
         ("@black pepper{1%g} and @salt and nothing else", ["black pepper", "salt"]),
         ("@black pepper{1%g} and @salt{} and nothing else", ["black pepper", "salt"]),
         ("@black pepper{1%g} and @salt{1} and nothing else", ["black pepper", "salt"]),
+        ("@flour (405) {450%g}", ["flour (405)"]),
     ],
 )
 def test_ingredient_match(text, expected_ingredients):
