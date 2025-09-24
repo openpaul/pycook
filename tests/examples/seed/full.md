@@ -6,7 +6,7 @@
 - ground black pepper
 - 2 potato
 - 1 kg bacon strips
-- 0.5 tbsp syrup
+- 1/2 tbsp syrup
 - 2 kg potato
 - 4 cup milk
 - 2 eggs
@@ -31,7 +31,7 @@ Then add **salt** and **ground black pepper** to taste.
 
 Poke holes in **2 potato**.
 
-Place **1 kg bacon strips** on a baking sheet and glaze with **0.5 tbsp syrup**.
+Place **1 kg bacon strips** on a baking sheet and glaze with **1/2 tbsp syrup**.
 
 *(Don't burn the roux!)*
 

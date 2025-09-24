@@ -481,9 +481,9 @@ class Recipe:
         return result
 
 
-def parse_number(value: str) -> Union[int, float, str]:
+def parse_number(value: str, fractions: bool = False) -> Union[int, float, str]:
     try:
-        if "/" in value:
+        if fractions and "/" in value:
             num, denom = value.split("/", 1)
             return float(num) / float(denom)
         return float(value) if "." in value else int(value)
@@ -500,24 +500,27 @@ class CooklangParser:
         recipe = parser.parse(cooklang_text)
     """
 
-    def __init__(self, strict: bool = False):
-        """
-        Initialize the parser.
+    def __init__(self):
+        self.setup_regex()
 
-        Args:
-            strict: If True, raise exceptions on parsing errors. If False, skip invalid elements.
-        """
-        self.strict = strict
+    def _get_matching_regex(
+        self, qualifier: str, required_name: bool = True
+    ) -> re.Pattern:
+        regex_pattern = r"(?:"
+        regex_pattern += re.escape(qualifier)
+        regex_pattern += r"(?P<name>[\w\s()\\/\\-]"
+        regex_pattern += r"+" if required_name else r"*"
+        regex_pattern += r"){(?P<amount>[\d.\/\-]+)?%*(?P<unit>[A-Za-z]+)?}(?:\((?P<shorthand>[\w\s]+)\))?)|(?:"
+        regex_pattern += re.escape(qualifier)
+        regex_pattern += r"(?P<simple>\w+))"
 
-        # Improved regex patterns for parsing different elements
-        # Better ingredient pattern that handles complex names and quantities
-        self.ingredient_pattern = re.compile(
-            r"(?:@(?P<ingredient>[\w\s()\\/\\-]+){(?P<amount>[\d.\/]+)?%*(?P<unit>[A-Za-z]+)?}(?:\((?P<shorthand>[\w\s]+)\))?)|(?:@(?P<simple>\w+))"
-        )
-        self.cookware_pattern = re.compile(r"#(?P<item>[\w\s]+)(?:\{([^}]*)\})?")
-        self.timer_pattern = re.compile(
-            r"~(?P<item>[a-zA-Z]*)?(?:\{([\d./]+)%?([a-zA-Z]+)\})"
-        )
+        return re.compile(regex_pattern)
+
+    def setup_regex(self):
+        self.ingredient_pattern = self._get_matching_regex(r"@")
+        self.cookware_pattern = self._get_matching_regex(r"#")
+        self.timer_pattern = self._get_matching_regex(r"~", required_name=False)
+
         self.comment_inline_pattern = re.compile(r"--(.*)$", re.MULTILINE)
         self.comment_block_pattern = re.compile(r"\[-\s*(.*?)\s*-\]", re.DOTALL)
         self.note_pattern = re.compile(r"^>\s*(.*)$", re.MULTILINE)
@@ -693,7 +696,7 @@ class CooklangParser:
         if match.group("simple"):
             return Ingredient(name=match.group("simple").strip())
 
-        name = match.group("ingredient").strip()
+        name = match.group("name").strip()
 
         quantity_str = match.group("amount") if match.group("amount") else None
         unit = match.group("unit") if match.group("unit") else None
@@ -709,15 +712,19 @@ class CooklangParser:
 
     def _create_cookware_from_match(self, match) -> Cookware:
         """Create a Cookware object from a regex match"""
-        name = match.group("item").strip()
-        quantity = match.group(2) if match.group(2) else None
+        if match.group("simple"):
+            return Cookware(name=match.group("simple").strip())
+        name = match.group("name").strip()
+        quantity = match.group("amount") if match.group("amount") else None
         return Cookware(name=name, quantity=quantity)
 
     def _create_timer_from_match(self, match) -> Timer:
         """Create a Timer object from a regex match"""
-        name = match.group("item").strip() if match.group("item") else None
-        duration_str = match.group(2) if match.group(2) else None
-        unit = match.group(3) if match.group(3) else None
+        if match.group("simple"):
+            raise ValueError("Timer must have a duration")
+        name = match.group("name").strip() if match.group("name") else None
+        duration_str = match.group("amount") if match.group("amount") else None
+        unit = match.group("unit") if match.group("unit") else None
 
         duration = None
         if duration_str:
