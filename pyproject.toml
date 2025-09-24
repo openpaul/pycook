@@ -1,28 +1,22 @@
 [project]
 name = "pycook"
-version = "0.1.0"
-description = ""
+version = "2.0.0"
+description = "A simple cooklang parser for python. It aims to be feature complete."
 authors = [
-    {name = "Paul Saary", email = "opensource@paulsaary.de"},
+    {name = "Paul Saary", email = "github@paulsaary.de"},
 ]
 requires-python = ">=3.10"
 
-dependencies = [
-    "loguru","pydantic", 
-    "markdown==3.4.1",
-    "markdown2latex @ git+https://github.com/openpaul/markdown2latex.git@fixes",  
-    "GitPython==3.1.41",
-]
-[project.scripts]
-pycook = "pycook.cli:main"
-
-
-
 [project.optional-dependencies]
-
-# Development dependencies (full + testing tools + docs)
 dev = [
     "pytest",
     "ruff",
     "pre-commit",
+    "pdoc",
+    "mktestdocs",
 ]
+
+
+[tool.pytest.ini_options]
+addopts = "--doctest-modules --doctest-ignore-import-errors"
+testpaths = ["tests", "pycook"]
