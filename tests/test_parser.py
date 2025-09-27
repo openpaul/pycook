@@ -1,109 +1,251 @@
 import os
+from pathlib import Path
 
-from pycook.cook import Recipe, parse
-from pycook.types import Ingredient, Position, Unit, Units
-from pycook.utils import create_unit, parse_cookware, parse_ingredients, parse_timer
+import pytest
 
+from pycooklang.parser import CooklangParser, Recipe, Step, latex_document, read_cook
 
-def test_create_unit():
-    for unit in Units:
-        assert isinstance(create_unit(unit.name, 1.0), Unit)
-        assert isinstance(create_unit(unit.name, 1.0), Unit)
+simple_recipe = Path(
+    os.path.join(os.path.dirname(__file__), "examples/seed/Neapolitan Pizza.cook")
+)
 
-    # esnure an exception is raised if unit can not be parsed
-    try:
-        create_unit("foo", 1.0)
-        assert False
-    except ValueError:
-        assert True
+full_recipe = Path(os.path.join(os.path.dirname(__file__), "examples/seed/full.cook"))
+no_title = Path(os.path.join(os.path.dirname(__file__), "examples/seed/no_title.cook"))
 
 
-def test_parse_simple_ingredient():
-    cooklang_text = "boil @potatoes {1%Kg} until soft."
-    ingredients = parse_ingredients(cooklang_text)
-    assert len(ingredients) == 1
+def test_CooklangParser_basic():
+    if not simple_recipe.exists():
+        raise FileNotFoundError("Test recipe file not found.")
+    parser = CooklangParser()
+    text = simple_recipe.read_text(encoding="utf-8")
+    recipe = parser.parse(text)
+    assert recipe.title == "Neapolitan Pizza"
+    assert len(recipe.ingredients) == 10
+    assert recipe.ingredients[0].name == "tipo zero flour"
+    assert recipe.ingredients[0].quantity == 820
+    assert recipe.ingredients[0].unit == "g"
+    assert len(recipe.steps) == 5
+    assert recipe.metadata.get("tags") == ["italian", "comfort food"]
+    for step in recipe.steps:
+        assert isinstance(step, Step)
 
 
-def test_parse_multi_word_ingredient():
-    cooklang_text = "add @ground pepper{} until tasty."
-    ingredients = parse_ingredients(cooklang_text)
-    assert len(ingredients) == 1
+def test_steps():
+    text = "A step,\nthe same step.\n\nA different step.\n"
+    parser = CooklangParser()
+
+    paragraphs = parser._split_into_paragraphs(text)
+    assert len(paragraphs) == 2
+    assert paragraphs[0] == "A step,\nthe same step."
+
+    recipe = parser.parse(text)
+    assert len(recipe.steps) == 2
+    assert recipe.steps[0].text == "A step,\nthe same step."
 
 
-def test_parse_ingredients():
-    # Test a simple case with one ingredient
-    cooklang_text = "@salt{}"
-    ingredients = parse_ingredients(cooklang_text)
-    assert len(ingredients) == 1
-    assert ingredients[0] == Ingredient(
-        name="salt", position=Position(row=0, start=0, length=7)
+@pytest.mark.parametrize(
+    "text, expected_ingredients",
+    [
+        (
+            "Mash @potato{2%kg} until smooth -- alternatively, boil 'em first, then mash 'em, then stick 'em in a stew.",
+            [("potato", 2, "kg")],
+        ),
+        (
+            "@unbleached all-purpose flour{26%g}",
+            [("unbleached all-purpose flour", 26, "g")],
+        ),
+        (
+            "@all-purpose flour/normal flour{26%g}",
+            [("all-purpose flour/normal flour", 26, "g")],
+        ),
+        ("@pepper and salt", [("pepper", None, None)]),
+        ("@black pepper{}", [("black pepper", None, None)]),
+        ("@black pepper{1-2%tbsp}", [("black pepper", "1-2", "tbsp")]),
+        ("@black pepper{1/2%tbsp}", [("black pepper", "1/2", "tbsp")]),
+        (
+            "@black pepper{} and @salt.",
+            [("black pepper", None, None), ("salt", None, None)],
+        ),
+        (
+            "@black pepper{} and @salt and nothing else",
+            [("black pepper", None, None), ("salt", None, None)],
+        ),
+        (
+            "@black pepper{1} and @salt and nothing else",
+            [("black pepper", 1, None), ("salt", None, None)],
+        ),
+        (
+            "@black pepper{1%g} and @salt and nothing else",
+            [("black pepper", 1, "g"), ("salt", None, None)],
+        ),
+        (
+            "@black pepper{1%g} and @salt{} and nothing else",
+            [("black pepper", 1, "g"), ("salt", None, None)],
+        ),
+        (
+            "@black pepper{1%g} and @salt{1} and nothing else",
+            [("black pepper", 1, "g"), ("salt", 1, None)],
+        ),
+        ("@flour (405) {450%g}", [("flour (405)", 450, "g")]),
+    ],
+)
+def test_ingredient_match(text, expected_ingredients):
+    parser = CooklangParser()
+    recipe = parser.parse(text)
+    assert len(recipe.ingredients) == len(expected_ingredients)
+    for ing, expected in zip(recipe.ingredients, expected_ingredients):
+        expected_name, expected_quantity, expected_unit = expected
+        assert ing.name == expected_name
+        assert ing.quantity == expected_quantity
+        assert ing.unit == expected_unit
+
+
+@pytest.mark.parametrize(
+    "text, expected_timers",
+    [
+        (
+            "Lay the potatoes on a #baking sheet{} and place into the #oven{}. Bake for ~{25%minutes}.",
+            [(None, 25, "minutes")],
+        ),
+        ("Boil @eggs{2} for ~eggs{3%minutes}.", [("eggs", 3, "minutes")]),
+        (
+            "Simmer the sauce for ~{60%seconds} while stirring.",
+            [(None, 60, "seconds")],
+        ),
+        (
+            "Cook pasta for ~pasta{10%minutes} and then drain.",
+            [("pasta", 10, "minutes")],
+        ),
+        (
+            "Cook pasta for ~{1/2%hour} and then drain.",
+            [(None, "1/2", "hour")],
+        ),
+        (
+            "Cook pasta for ~a shoe{1/2%hour} and then drain.",
+            [("a shoe", "1/2", "hour")],
+        ),
+        (
+            "Let dough rise for ~dough{120%minutes} before baking.",
+            [("dough", 120, "minutes")],
+        ),
+        ("Roast veggies for ~{45%minutes} and then serve.", [(None, 45, "minutes")]),
+    ],
+)
+def test_timer_match(text, expected_timers):
+    parser = CooklangParser()
+    recipe = parser.parse(text)
+    assert len(recipe.timers) == len(expected_timers)
+    for timer, (name, duration, unit) in zip(recipe.timers, expected_timers):
+        assert timer.name == name
+        assert timer.duration == duration
+        assert timer.unit == unit
+
+
+@pytest.mark.parametrize(
+    "text, expected_cookware",
+    [
+        ("Place the potatoes into a #pot.", [("pot", None)]),
+        ("Mash the potatoes with a #potato masher{}.", [("potato masher", None)]),
+        (
+            "Use a #frying pan{} and a #spatula{} for cooking.",
+            [("frying pan", None), ("spatula", None)],
+        ),
+        ("Bake in #oven{} for ~{30%minutes}.", [("oven", None)]),
+        (
+            "Combine ingredients in a #mixing bowl{} then transfer to #pan{}.",
+            [("mixing bowl", None), ("pan", None)],
+        ),
+        ("#whisk{} the eggs until fluffy.", [("whisk", None)]),
+        ("#grill{} the vegetables over medium heat.", [("grill", None)]),
+    ],
+)
+def test_cookware_match(text, expected_cookware):
+    parser = CooklangParser()
+    recipe = parser.parse(text)
+    assert len(recipe.cookware) == len(expected_cookware)
+    for cw, (expected_name, expected_quantity) in zip(
+        recipe.cookware, expected_cookware
+    ):
+        assert cw.name == expected_name
+        assert getattr(cw, "quantity", None) == expected_quantity
+
+
+def test_full_recipe_features():
+    text = full_recipe.read_text(encoding="utf-8")
+    parser = CooklangParser()
+    recipe = parser.parse(text)
+    assert recipe.title == "Spaghetti Carbonara"
+
+    expected_ingredient_names = [
+        "salt",
+        "ground black pepper",
+        "potato",
+        "bacon strips",
+        "syrup",
+        "potato",
+        "milk",
+        "eggs",
+        "flour",
+        "water",
+        "cheese",
+        "spinach",
+        "onion",
+        "garlic",
+        "onion",
+    ]
+
+    # ingredients
+    # assert len(recipe.ingredients) == len(expected_ingredient_names)
+    for ingredient, expected_name in zip(recipe.ingredients, expected_ingredient_names):
+        assert ingredient.name == expected_name
+
+    # steps
+    assert len(recipe.steps) == 15
+
+    assert recipe.metadata.get("tags") == [
+        "pasta",
+        "quick",
+        "comfort food",
+    ]
+
+
+def test_to_markdown():
+    text = full_recipe.read_text(encoding="utf-8")
+    parser = CooklangParser()
+    recipe = parser.parse(text)
+    md = recipe.to_markdown()
+    expected_markdown_p = (
+        Path(os.path.dirname(__file__)) / "examples" / "seed" / "full.md"
     )
+    expected_text = expected_markdown_p.read_text(encoding="utf-8")
 
-    # Test multiple ingredients with units and amounts
-    cooklang_text = """
-    @salt and @ground black pepper{} to taste.
-    Poke holes in @potato{2}.
-    Place @bacon strips{1.2%kg} on a baking sheet and glaze with @syrup{1/2%tbsp}.
-    """
-    ingredients = parse_ingredients(cooklang_text)
-    assert len(ingredients) == 5
-    assert ingredients[0].name == "salt"
-
-    assert ingredients[3] == Ingredient(
-        name="bacon strips",
-        unit=create_unit("kg", 1.2),
-        position=Position(row=0, start=88, length=21),
-    )
-    assert ingredients[4] == Ingredient(
-        name="syrup",
-        unit=create_unit("tablespoon", 1.0 / 2),
-        position=Position(row=0, start=143, length=16),
-    )
+    assert md.strip() == expected_text.strip()
 
 
-def test_timer():
-    text = "Lay the potatoes on a #baking sheet{} and place into the #oven{}. Bake for ~{25%minutes}. Maybe use an eggtimer for eggs of ~eggs{6%min}"
-    timers = parse_timer(text)
-    assert len(timers) == 2
-    assert timers[0].name == ""
-    assert timers[0].unit.unit == Units.minute
-
-    assert timers[1].name == "eggs"
-    assert timers[1].unit.unit == Units.minute
-    assert timers[1].unit.amount == 6
-
-
-def test_cookware():
-    text = """Place the potatoes into a #pot.
-Mash the potatoes with a #potato masher{}."""
-    cookware = parse_cookware(text)
-    assert len(cookware) == 2
-    assert cookware[0].name == "pot"
-    assert cookware[0].unit is None
-    assert cookware[1].name == "potato masher"
-    assert cookware[1].unit is None
-
-
-def test_full_parser():
-    example_file = "tests/examples/seed/Neapolitan Pizza.cook"
-    lines = [line.strip() for line in open(example_file).readlines()]
-    recipe = parse(os.path.basename(example_file), lines)
+def test_read_cook():
+    recipe = read_cook(simple_recipe)
     assert isinstance(recipe, Recipe)
+    assert recipe.title == "Neapolitan Pizza"
 
-    assert len(recipe.metadata) == 1
+    recipe_no_title = read_cook(no_title, infer_title=True)
+    assert isinstance(recipe_no_title, Recipe)
+    assert recipe_no_title.title == "No Title"
 
-    steps = recipe.steps
-    assert len(steps) == 5
 
-    assert steps[0].rows[0].ingredients[0].name == "tipo zero flour"
-    assert (
-        str(steps[0].rows[0])
-        == "Make 6 pizza balls using 820 g tipo zero flour, 533 ml water, 24.6 g salt and 1.6 g fresh yeast. Put in a fridge for 2 days."
+def test_to_latex():
+    text = full_recipe.read_text(encoding="utf-8")
+    parser = CooklangParser()
+    recipe = parser.parse(text)
+    latex = recipe.to_latex()
+    expected_latex_p = (
+        Path(os.path.dirname(__file__)) / "examples" / "seed" / "full.tex"
     )
+    expected_text = expected_latex_p.read_text(encoding="utf-8")
+
+    assert latex.strip() == expected_text.strip()
 
 
-def test_egg():
-    s = "Add @egg{1}, @salt, @pepper, @paprica and @bread crums{50%g}."
-    recipe = parse("test", [s])
-    assert recipe.steps[0].rows[0].ingredients[0].unit == 1
-    assert recipe.steps[0].rows[0].ingredients[1].name == "salt"
+def test_latex_document():
+    recipe_folder = Path(os.path.join(os.path.dirname(__file__), "examples/seed/"))
+    recipe = latex_document(recipe_folder)
+    assert isinstance(recipe, str)

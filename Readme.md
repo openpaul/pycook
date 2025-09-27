@@ -1,10 +1,40 @@
 # PyCook
 
-This package is a cooklang converter from cooklang to markdown.
+This package is a cooklang parser. 
 
 I mostly develop this to be able to handle coklang files for my cookbook. 
 
+It aims to be feature complete and compatible with the specs listed here:
+
+[https://cooklang.org/docs/spec/](https://cooklang.org/docs/spec/)
+
+It should not be very opinionated, for example it does not enforce special units. You can use SI units or any other unit you want.
+
 You may use this as you please under the LICENSE given. 
+
+
+## Usage
+```sh
+pip install git+https://github.com/openpaul/pycooklang
+```
+
+The core class is called `Recipe`.
+
+### Read from file
+```python
+from pycooklang import read_cook
+
+recipe = read_cook("recipe.cook")
+```
+
+
+### Parse from string
+```python
+from pycooklang import CooklangParser
+
+parser = CooklangParser()
+recipe = parser.parse("recipe text @in cooklang{}")
+```
 
 ## Issues
 
