@@ -37,7 +37,7 @@ jobs:
 
       - name: Build documentation
         run: |
-          pdoc pycook \
+          pdoc pycooklang \
           --output-dir site \
           --docformat google \
           --show-source \

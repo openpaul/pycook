@@ -41,6 +41,7 @@ Examples:
     >>> print(recipe.title)  # doctest: +SKIP
 """
 
+import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -89,6 +90,13 @@ class Ingredient:
             result += f" ({self.preparation})"
         result = result.replace("  ", " ")
         return result
+
+    def to_latex(self):
+        """
+        Convert to LaTeX ingredient format.
+        """
+
+        return f"\\ingredient[{self.quantity}]{{{self.unit or ''}}}{{{self.name}}}"
 
 
 @dataclass
@@ -257,6 +265,14 @@ class Token:
         """
         return self.text
 
+    def to_latex(self) -> str:
+        """Convert to LaTeX format.
+
+        Returns:
+            LaTeX representation of the token.
+        """
+        return self.text
+
 
 @dataclass
 class TextToken(Token):
@@ -315,6 +331,14 @@ class IngredientToken(Token):
             result += f" <em>({self.ingredient.preparation})</em>"
         return result
 
+    def to_latex(self) -> str:
+        # \textbf{150 g water}
+        text = f"{self.ingredient.name}"
+        if self.ingredient.quantity:
+            text += f" {self.ingredient.quantity} {self.ingredient.unit or ''}"
+            text = text.strip()
+        return "\\textbf{" + text + "}"
+
 
 @dataclass
 class CookwareToken(Token):
@@ -348,6 +372,11 @@ class CookwareToken(Token):
             return f"<em>{self.cookware.quantity} {self.cookware.name}</em>"
         return f"<em>{self.cookware.name}</em>"
 
+    def to_latex(self) -> str:
+        if self.cookware.quantity:
+            return f"\\textit{{{self.cookware.quantity} {self.cookware.name}}}"
+        return f"\\textit{{{self.cookware.name}}}"
+
 
 @dataclass
 class TimerToken(Token):
@@ -378,6 +407,9 @@ class TimerToken(Token):
 
     def to_html(self) -> str:
         return f"<em>{self.timer}</em>" if str(self.timer) else ""
+
+    def to_latex(self) -> str:
+        return f"\\textbf{{{self.timer.duration} {self.timer.unit or ''}}}".strip()
 
 
 @dataclass
@@ -414,6 +446,12 @@ class CommentToken(Token):
             return f"<!-- {self.comment.text} -->"
         return f"<em>({self.comment.text})</em>"
 
+    def to_latex(self) -> str:
+        if self.comment.is_block:
+            text = self.comment.text.replace("\n", " ")
+            return f"% {text}"
+        return f"\\textit{{({self.comment.text})}}"
+
 
 @dataclass
 class NoteToken(Token):
@@ -444,6 +482,9 @@ class NoteToken(Token):
 
     def to_html(self) -> str:
         return f"<blockquote>{self.note.text}</blockquote>"
+
+    def to_latex(self) -> str:
+        return f"\\begin{{quote}}\n{self.note.text}\n\\end{{quote}}"
 
 
 @dataclass
@@ -551,6 +592,21 @@ class Step:
             Step as HTML text.
         """
         return "".join(token.to_html() for token in self.tokens)
+
+    def to_latex(self) -> str:
+        """Convert to LaTeX format.
+
+        Returns:
+            Step as LaTeX text.
+        """
+        text = []
+        for ingredient in self.ingredients:
+            text.append(ingredient.to_latex())
+            text.append("\n")
+        for token in self.tokens:
+            text.append(token.to_latex())
+
+        return "".join(text) + "\n\n"
 
     @property
     def is_comment(self) -> bool:
@@ -706,15 +762,18 @@ class Recipe:
         return "\n".join(result).strip()
 
     def to_latex(self) -> str:
-        """Convert recipe to LaTeX format.
+        """Convert recipe to LaTeX recipe format."""
+        results = []
+        title = "\n\\begin{recipe}{" + (self.title or "Recipe") + "}{}\n\n"
+        closing = "\\end{recipe}\n\\cleardoublepage\n\n"
 
-        Note:
-            This method is not yet implemented.
+        results.append(title)
 
-        Raises:
-            NotImplementedError: LaTeX export is not available.
-        """
-        raise NotImplementedError("LaTeX export not implemented yet")
+        for step in self.steps:
+            results.append(step.to_latex())
+
+        results.append(closing)
+        return "".join(results)
 
     def to_html(self, image_path: Path | None = None) -> str:
         """Convert recipe to HTML format.
@@ -1208,3 +1267,50 @@ def read_cook(
             recipe.metadata["image"] = str(image_path)
 
     return recipe
+
+
+def _load_tex_assets() -> list[str]:
+    folder_path = Path(os.path.dirname(__file__)) / "assets"
+    all_tex_files = list(folder_path.glob("*.tex"))
+    all_tex_files.sort()
+    text_contens = []
+    for tex_file in all_tex_files:
+        with open(tex_file) as f:
+            text_contens.append(f.read())
+    return text_contens
+
+
+def latex_document(recipes: Path | list[Recipe]) -> str:
+    """Generate a complete LaTeX document for one or more recipes.
+
+    Args:
+        recipes: Path to a file or folder or a list of Recipe objects
+    Returns:
+        Complete LaTeX document as a string
+    """
+    if isinstance(recipes, Path):
+        if recipes.is_file():
+            recipes = [read_cook(recipes)]
+        elif recipes.is_dir():
+            recipes = [
+                read_cook(p) for p in sorted(recipes.glob("*.cook")) if p.is_file()
+            ]
+        else:
+            raise ValueError("Provided path is neither a file nor a directory")
+    elif not isinstance(recipes, list) or not all(
+        isinstance(r, Recipe) for r in recipes
+    ):
+        raise ValueError("recipes must be a Path or a list of Recipe objects")
+
+    latex_assets = _load_tex_assets()
+    if len(latex_assets) < 3:
+        raise ValueError("Could not load LaTeX assets")
+    document = []
+    for asset in latex_assets:
+        if asset.strip() == "%% RECIPE":
+            for recipe in recipes:
+                document.append(recipe.to_latex())
+        else:
+            document.append(asset)
+        document.append("\n")
+    return "".join(document)

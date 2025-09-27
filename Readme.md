@@ -15,14 +15,14 @@ You may use this as you please under the LICENSE given.
 
 ## Usage
 ```sh
-pip install git+https://github.com/openpaul/pycook
+pip install git+https://github.com/openpaul/pycooklang
 ```
 
 The core class is called `Recipe`.
 
 ### Read from file
 ```python
-from pycook import read_cook
+from pycooklang import read_cook
 
 recipe = read_cook("recipe.cook")
 ```
@@ -30,7 +30,7 @@ recipe = read_cook("recipe.cook")
 
 ### Parse from string
 ```python
-from pycook import CooklangParser
+from pycooklang import CooklangParser
 
 parser = CooklangParser()
 recipe = parser.parse("recipe text @in cooklang{}")

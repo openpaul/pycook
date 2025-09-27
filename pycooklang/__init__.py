@@ -9,7 +9,7 @@ The parser converts Cooklang markup into structured Python objects and can expor
 to various formats including Markdown, HTML, and plain text.
 
 Examples:
-    >>> from pycook import CooklangParser
+    >>> from pycooklang import CooklangParser
     >>> parser = CooklangParser()
     >>> recipe_text = '''
     ... ---
@@ -31,12 +31,12 @@ Examples:
 
     Reading from file:
     >>> from pathlib import Path
-    >>> from pycook import read_cook
+    >>> from pycooklang import read_cook
     >>> recipe = read_cook("recipe.cook") # doctest: +SKIP
     >>> print(recipe.title) # doctest: +SKIP
 """
 
-from .parser import CooklangParser, Recipe, read_cook
+from .parser import CooklangParser, Recipe, latex_document, read_cook
 
 __version__ = "2.0.0"
-__all__ = ["Recipe", "CooklangParser", "read_cook"]
+__all__ = ["Recipe", "CooklangParser", "read_cook", "latex_document"]

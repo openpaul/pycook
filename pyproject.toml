@@ -1,5 +1,5 @@
 [project]
-name = "pycook"
+name = "pycooklang"
 version = "2.0.0"
 description = "A simple cooklang parser for python. It aims to be feature complete."
 authors = [
@@ -19,4 +19,4 @@ dev = [
 
 [tool.pytest.ini_options]
 addopts = "--doctest-modules --doctest-ignore-import-errors"
-testpaths = ["tests", "pycook"]
+testpaths = ["tests", "pycooklang"]

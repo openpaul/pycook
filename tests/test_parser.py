@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from pycook.parser import CooklangParser, Recipe, Step, read_cook
+from pycooklang.parser import CooklangParser, Recipe, Step, latex_document, read_cook
 
 simple_recipe = Path(
     os.path.join(os.path.dirname(__file__), "examples/seed/Neapolitan Pizza.cook")
@@ -230,3 +230,22 @@ def test_read_cook():
     recipe_no_title = read_cook(no_title, infer_title=True)
     assert isinstance(recipe_no_title, Recipe)
     assert recipe_no_title.title == "No Title"
+
+
+def test_to_latex():
+    text = full_recipe.read_text(encoding="utf-8")
+    parser = CooklangParser()
+    recipe = parser.parse(text)
+    latex = recipe.to_latex()
+    expected_latex_p = (
+        Path(os.path.dirname(__file__)) / "examples" / "seed" / "full.tex"
+    )
+    expected_text = expected_latex_p.read_text(encoding="utf-8")
+
+    assert latex.strip() == expected_text.strip()
+
+
+def test_latex_document():
+    recipe_folder = Path(os.path.join(os.path.dirname(__file__), "examples/seed/"))
+    recipe = latex_document(recipe_folder)
+    assert isinstance(recipe, str)
