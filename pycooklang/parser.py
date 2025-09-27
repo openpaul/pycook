@@ -619,6 +619,17 @@ class Step:
 
 
 @dataclass
+class RecipeSettings:
+    """
+    Settings that affect recipe parsing and rendering.
+    The defaults are chosen to align with the Cooklang specification.
+    But can be overridden for specific recipes or use cases.
+    """
+
+    ignore_section_depth: bool = True
+
+
+@dataclass
 class Recipe:
     """Complete parsed recipe with all components and metadata.
 
@@ -645,6 +656,7 @@ class Recipe:
     metadata: Dict = field(default_factory=dict)
     steps: List[Step] = field(default_factory=list)
     sections: List[Section] = field(default_factory=list)
+    settings: RecipeSettings = field(default_factory=RecipeSettings)
 
     @property
     def ingredients(self) -> List[Ingredient]:
@@ -741,22 +753,43 @@ class Recipe:
                 result.append(f"- {cookware}")
             result.append("")
 
-        # Add sections and steps
-        if self.steps and include_instructions:
+        if self.sections or (self.steps and include_instructions):
             result.append("## Instructions")
             result.append("")
-
+        if self.steps and include_instructions:
             current_section = None
-
+            current_section_index = -1
             for step in self.steps:
                 if step.section and step.section != current_section:
-                    current_section = step.section
-                    section_level = min(current_section.level + 2, 6)  # Max h6
-                    section_markers = "#" * section_level
-                    result.append(f"{section_markers} {current_section.title}")
-                    result.append("")
+                    # what if we have multiple sections with no steps
+                    while (
+                        current_section != step.section
+                        and current_section_index + 1 < len(self.sections)
+                    ):
+                        current_section_index += 1
+                        current_section = self.sections[current_section_index]
+                        section_level = (
+                            min(current_section.level + 2, 6)
+                            if not self.settings.ignore_section_depth
+                            else 3
+                        )
+                        result.append(f"{'#' * section_level} {current_section.title}")
+                        result.append("")
 
-                result.append(f"{step.to_markdown()}")
+                md = step.to_markdown().strip()
+                if md:
+                    result.append(md)
+                    result.append("")
+            # add any remaining sections with no steps
+            while current_section_index + 1 < len(self.sections):
+                current_section_index += 1
+                current_section = self.sections[current_section_index]
+                section_level = (
+                    min(current_section.level + 2, 6)
+                    if not self.settings.ignore_section_depth
+                    else 3
+                )
+                result.append(f"{'#' * section_level} {current_section.title}")
                 result.append("")
 
         return "\n".join(result).strip()
@@ -812,11 +845,44 @@ class Recipe:
             for cookware in self.cookware:
                 results.append(f"<li>{cookware}</li>")
             results.append("</ul>")
+        # Sections with no steps need to be shown
+        current_section = None
+        current_section_index = -1
+        if self.sections or self.steps:
+            results.append("<h2>Instructions</h2>")
         # Add Instructions
         if self.steps:
-            results.append("<h2>Instructions</h2>")
             for step in self.steps:
+                if step.section and step.section != current_section:
+                    # what if we have multiple sections with no steps
+                    while (
+                        current_section != step.section
+                        and current_section_index + 1 < len(self.sections)
+                    ):
+                        current_section_index += 1
+                        current_section = self.sections[current_section_index]
+                        section_level = (
+                            min(current_section.level + 2, 6)
+                            if not self.settings.ignore_section_depth
+                            else 3
+                        )
+                        results.append(
+                            f"<h{section_level}>{current_section.title}</h{section_level}>"
+                        )
+
                 results.append(f"<p>{step.to_html()}</p>")
+        # add any remaining sections with no steps
+        while current_section_index + 1 < len(self.sections):
+            current_section_index += 1
+            current_section = self.sections[current_section_index]
+            section_level = (
+                min(current_section.level + 2, 6)
+                if not self.settings.ignore_section_depth
+                else 3
+            )
+            results.append(
+                f"<h{section_level}>{current_section.title}</h{section_level}>"
+            )
         return "\n".join(results).strip()
 
     def to_text(self) -> str:
@@ -970,8 +1036,9 @@ class CooklangParser:
         'oil'
     """
 
-    def __init__(self):
+    def __init__(self, ignore_section_depth: bool = True):
         """Initialize parser and compile regex patterns."""
+        self.settings = RecipeSettings(ignore_section_depth=ignore_section_depth)
         self._setup_regex()
 
     def _get_matching_regex(
@@ -1000,6 +1067,7 @@ class CooklangParser:
     def parse(self, text: str) -> Recipe:
         """Parse Cooklang text and return a Recipe object"""
         recipe = Recipe()
+        recipe.settings = self.settings  # Use parser settings
 
         # Extract and parse metadata (YAML front matter)
         text, recipe.metadata = self._parse_metadata(text)

@@ -54,7 +54,7 @@ Mash **2 kg potato** until smooth *(alternatively, boil 'em first, then mash 'em
 
 Mix **200 g flour** and **100 ml water** together until smooth.
 
-#### Filling
+### Filling
 
 Combine **100 g cheese** and **50 g spinach**, then season to taste.
 
