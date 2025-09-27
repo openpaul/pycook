@@ -98,6 +98,16 @@ class Ingredient:
 
         return f"\\ingredient[{self.quantity}]{{{self.unit or ''}}}{{{self.name}}}"
 
+    def to_html(self, table: bool = True):
+        if table:
+            prep = f" ({self.preparation})" if self.preparation else ""
+            return f"<tr><td>{self.quantity or ''}</td><td>{self.unit or ''}</td><td>{self.name}{prep}</td></tr>"
+        else:
+            prep = f" <em>({self.preparation})</em>" if self.preparation else ""
+            qty = f"{self.quantity or ''} " if self.quantity else ""
+            unit = f"{self.unit or ''} " if self.unit else ""
+            return f"{qty}{unit}{self.name}{prep}".strip()
+
 
 @dataclass
 class Cookware:
@@ -881,10 +891,12 @@ class Recipe:
         # Add Ingredients
         if self.ingredients:
             results.append("<h2>Ingredients</h2>")
-            results.append("<ul>")
+
+            results.append("<table><tbody>")
             for ingredient in self.ingredients:
-                results.append(f"<li>{ingredient}</li>")
-            results.append("</ul>")
+                results.append(ingredient.to_html(table=True))
+            results.append("</tbody></table>")
+
         # Add Cookware
         if self.cookware:
             results.append("<h2>Equipment</h2>")
