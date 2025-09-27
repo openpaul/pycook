@@ -711,6 +711,18 @@ class Recipe:
         """
         return len([step for step in self.steps if not step.is_comment])
 
+    def __bool__(self) -> bool:
+        if (
+            self.steps
+            or self.metadata
+            or self.ingredients
+            or self.cookware
+            or self.sections
+            or self.title
+        ):
+            return True
+        return False
+
     def to_markdown(
         self,
         include_ingredients: bool = True,
