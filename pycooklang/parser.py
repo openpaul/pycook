@@ -801,9 +801,44 @@ class Recipe:
         closing = "\\end{recipe}\n\\cleardoublepage\n\n"
 
         results.append(title)
-
+        current_section = None
+        current_section_index = -1
+        section_level_latex = {
+            1: "section",
+            2: "subsection",
+            3: "subsubsection",
+        }
         for step in self.steps:
+            if step.section and step.section != current_section:
+                print(step.section, current_section)
+                # what if we have multiple sections with no steps
+                while (
+                    current_section != step.section
+                    and current_section_index + 1 < len(self.sections)
+                ):
+                    current_section_index += 1
+                    current_section = self.sections[current_section_index]
+                    section_level = (
+                        min(current_section.level, 3)
+                        if not self.settings.ignore_section_depth
+                        else 1
+                    )
+                    results.append(
+                        f"\\{section_level_latex[section_level]}{{{current_section.title}}}\n"
+                    )
             results.append(step.to_latex())
+
+        while current_section_index + 1 < len(self.sections):
+            current_section_index += 1
+            current_section = self.sections[current_section_index]
+            section_level = (
+                min(current_section.level, 3)
+                if not self.settings.ignore_section_depth
+                else 1
+            )
+            results.append(
+                f"\\{section_level_latex[section_level]}{{{current_section.title}}}\n"
+            )
 
         results.append(closing)
         return "".join(results)
