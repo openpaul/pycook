@@ -87,6 +87,10 @@ def test_steps():
             [("black pepper", 1, "g"), ("salt", 1, None)],
         ),
         ("@flour (405) {450%g}", [("flour (405)", 450, "g")]),
+        (
+            "Fry the chicken in @vegetable oil{} at ~170–175 °C until golden and cooked through.",
+            [("vegetable oil", None, None)],
+        ),
     ],
 )
 def test_ingredient_match(text, expected_ingredients):
@@ -129,6 +133,7 @@ def test_ingredient_match(text, expected_ingredients):
             [("dough", 120, "minutes")],
         ),
         ("Roast veggies for ~{45%minutes} and then serve.", [(None, 45, "minutes")]),
+        (" simmer ~{20%min} until tender.", [(None, 20, "min")]),
     ],
 )
 def test_timer_match(text, expected_timers):

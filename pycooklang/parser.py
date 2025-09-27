@@ -1077,22 +1077,27 @@ class CooklangParser:
         self._setup_regex()
 
     def _get_matching_regex(
-        self, qualifier: str, required_name: bool = True
+        self, qualifier: str, required_name: bool = True, also_simple: bool = True
     ) -> re.Pattern:
+        # (?:~(?P<name>[\w\s()\\/\\-]){(?P<amount>[\d.\/\-]+)?%*(?P<unit>[A-Za-z]+)?}(?:\((?P<shorthand>[\w\s]+)\))?)|(?:~(?P<simple>\w+))
         regex_pattern = r"(?:"
         regex_pattern += re.escape(qualifier)
         regex_pattern += r"(?P<name>[\w\s()\\/\\-]"
         regex_pattern += r"+" if required_name else r"*"
-        regex_pattern += r"){(?P<amount>[\d.\/\-]+)?%*(?P<unit>[A-Za-z]+)?}(?:\((?P<shorthand>[\w\s]+)\))?)|(?:"
-        regex_pattern += re.escape(qualifier)
-        regex_pattern += r"(?P<simple>\w+))"
+        regex_pattern += r"){(?P<amount>[\d.\/\-]+)?%*(?P<unit>[A-Za-z]+)?}(?:\((?P<shorthand>[\w\s]+)\))?)"
+        if also_simple:
+            regex_pattern += "|(?:"
+            regex_pattern += re.escape(qualifier)
+            regex_pattern += r"(?P<simple>\w+))"
 
         return re.compile(regex_pattern)
 
     def _setup_regex(self):
         self.ingredient_pattern = self._get_matching_regex(r"@")
         self.cookware_pattern = self._get_matching_regex(r"#")
-        self.timer_pattern = self._get_matching_regex(r"~", required_name=False)
+        self.timer_pattern = self._get_matching_regex(
+            r"~", required_name=False, also_simple=False
+        )
 
         self.comment_inline_pattern = re.compile(r"--(.*)$", re.MULTILINE)
         self.comment_block_pattern = re.compile(r"\[-\s*(.*?)\s*-\]", re.DOTALL)
@@ -1298,8 +1303,6 @@ class CooklangParser:
 
     def _create_timer_from_match(self, match) -> Timer:
         """Create a Timer object from a regex match"""
-        if match.group("simple"):
-            raise ValueError("Timer must have a duration")
         name = match.group("name").strip() if match.group("name") else None
         duration_str = match.group("amount") if match.group("amount") else None
         unit = match.group("unit") if match.group("unit") else None
