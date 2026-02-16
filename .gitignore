@@ -4,3 +4,4 @@ build
 .venv
 .vscode
 site
+*cook.new

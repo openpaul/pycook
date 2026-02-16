@@ -95,8 +95,10 @@ class Ingredient:
         """
         Convert to LaTeX ingredient format.
         """
-
-        return f"\\ingredient[{self.quantity}]{{{self.unit or ''}}}{{{self.name}}}"
+        if not self.quantity:
+            return f"\\ingredient[]{{{self.unit or ''}}}{{{self.name}}}"
+        else:
+            return f"\\ingredient[{self.quantity}]{{{self.unit or ''}}}{{{self.name}}}"
 
     def to_html(self, table: bool = True):
         if table:
@@ -342,11 +344,14 @@ class IngredientToken(Token):
         return result
 
     def to_latex(self) -> str:
-        # \textbf{150 g water}
-        text = f"{self.ingredient.name}"
+        text = ""
         if self.ingredient.quantity:
-            text += f" {self.ingredient.quantity} {self.ingredient.unit or ''}"
+            text += f"{self.ingredient.quantity} {self.ingredient.unit or ''}"
             text = text.strip()
+        text += f" {self.ingredient.name}"
+        if self.ingredient.preparation:
+            text += f" ({self.ingredient.preparation})"
+        text = text.strip()
         return "\\textbf{" + text + "}"
 
 
@@ -460,7 +465,7 @@ class CommentToken(Token):
         if self.comment.is_block:
             text = self.comment.text.replace("\n", " ")
             return f"% {text}"
-        return f"\\textit{{({self.comment.text})}}"
+        return f"\\textit{{{self.comment.text}}}"
 
 
 @dataclass
@@ -614,9 +619,18 @@ class Step:
             text.append(ingredient.to_latex())
             text.append("\n")
         for token in self.tokens:
-            text.append(token.to_latex())
-
+            text.append(self._replace_special_chars(token.to_latex()))
+        # add a white space after each step
+        text.append("\n\n\\vspace{1em}\n")
         return "".join(text) + "\n\n"
+
+    def _replace_special_chars(self, text: str) -> str:
+        special_chars = {
+            "&deg;": "°",
+        }
+        for key, value in special_chars.items():
+            text = text.replace(key, value)
+        return text
 
     @property
     def is_comment(self) -> bool:
@@ -832,7 +846,6 @@ class Recipe:
         }
         for step in self.steps:
             if step.section and step.section != current_section:
-                print(step.section, current_section)
                 # what if we have multiple sections with no steps
                 while (
                     current_section != step.section
@@ -1108,7 +1121,7 @@ class CooklangParser:
         regex_pattern += re.escape(qualifier)
         regex_pattern += r"(?P<name>[\w\s()\\/\\-]"
         regex_pattern += r"+" if required_name else r"*"
-        regex_pattern += r"){(?P<amount>[\d.\/\-]+)?%*(?P<unit>[A-Za-z]+)?}(?:\((?P<shorthand>[\w\s]+)\))?)"
+        regex_pattern += r"){(?P<amount>[\d.\/\-]+)?%*(?P<unit>[A-Za-z]+)?}(?:\((?P<shorthand>[\w\s.:]+)\))?)"
         if also_simple:
             regex_pattern += "|(?:"
             regex_pattern += re.escape(qualifier)
