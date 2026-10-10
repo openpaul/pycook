@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pycooklang"
-version = "2.1.0"
+version = "2.2.0"
 description = "A simple cooklang parser for python. It aims to be feature complete."
 authors = [
     {name = "Paul Saary", email = "github@paulsaary.de"},

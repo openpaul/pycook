@@ -50,6 +50,42 @@ from typing import Dict, List, Optional, Tuple, Union
 import yaml
 
 
+def _inline_markdown_to_html(text: str) -> str:
+    """Render inline markdown (**bold**, *italic*, `code`, [link](url)) to HTML."""
+    text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
+    text = re.sub(r"(?<!\*)\*([^*\n]+?)\*(?!\*)", r"<em>\1</em>", text)
+    text = re.sub(r"`([^`]+?)`", r"<code>\1</code>", text)
+    text = re.sub(r"\[([^\]]+?)\]\(([^)\s]+?)\)", r'<a href="\2">\1</a>', text)
+    return text
+
+
+def _inline_markdown_to_plain(text: str) -> str:
+    """Strip inline markdown markers, keeping the text."""
+    text = re.sub(r"\*\*(.+?)\*\*", r"\1", text)
+    text = re.sub(r"(?<!\*)\*([^*\n]+?)\*(?!\*)", r"\1", text)
+    text = re.sub(r"`([^`]+?)`", r"\1", text)
+    text = re.sub(r"\[([^\]]+?)\]\([^)]+?\)", r"\1", text)
+    return text
+
+
+def _replace_special_chars(text: str) -> str:
+    special_chars = {
+        "&deg;": "°",
+    }
+    for key, value in special_chars.items():
+        text = text.replace(key, value)
+    return text
+
+
+def _inline_markdown_to_latex(text: str) -> str:
+    """Render inline markdown to LaTeX."""
+    text = re.sub(r"\*\*(.+?)\*\*", r"\\textbf{\1}", text)
+    text = re.sub(r"(?<!\*)\*([^*\n]+?)\*(?!\*)", r"\\textit{\1}", text)
+    text = re.sub(r"`([^`]+?)`", r"\\texttt{\1}", text)
+    text = re.sub(r"\[([^\]]+?)\]\([^)]+?\)", r"\1", text)
+    return text
+
+
 @dataclass
 class Ingredient:
     """Represents a recipe ingredient with optional quantity, unit, and preparation.
@@ -650,7 +686,9 @@ class Step:
         Returns:
             Step as plain text without markup.
         """
-        return "".join(token.to_plain_text() for token in self.tokens)
+        return _inline_markdown_to_plain(
+            "".join(token.to_plain_text() for token in self.tokens)
+        )
 
     def to_html(self) -> str:
         """Convert to HTML format.
@@ -658,7 +696,9 @@ class Step:
         Returns:
             Step as HTML text.
         """
-        return "".join(token.to_html() for token in self.tokens)
+        return _inline_markdown_to_html(
+            "".join(token.to_html() for token in self.tokens)
+        )
 
     def to_latex(self) -> str:
         """Convert to LaTeX format.
@@ -670,19 +710,13 @@ class Step:
         for ingredient in self.ingredients:
             text.append(ingredient.to_latex())
             text.append("\n")
-        for token in self.tokens:
-            text.append(self._replace_special_chars(token.to_latex()))
+        tokens = "".join(token.to_latex() for token in self.tokens)
+        tokens = _replace_special_chars(tokens)
+        tokens = _inline_markdown_to_latex(tokens)
+        text.append(tokens)
         # add a white space after each step
         text.append("\n\n\\vspace{1em}\n")
         return "".join(text) + "\n\n"
-
-    def _replace_special_chars(self, text: str) -> str:
-        special_chars = {
-            "&deg;": "°",
-        }
-        for key, value in special_chars.items():
-            text = text.replace(key, value)
-        return text
 
     @property
     def is_comment(self) -> bool:

@@ -457,3 +457,67 @@ def test_optional_cookware_token(parser):
     assert "*(optional)" in token.to_markdown()
     assert "(optional)" in token.to_html()
     assert "(optional)" in token.to_plain_text()
+
+
+# ---------------------------------------------------------------------------
+# Inline markdown in step text
+# ---------------------------------------------------------------------------
+
+
+def test_bold_in_step_html(parser):
+    recipe = parser.parse("**Tip:** Preheat the #oven{}.")
+    html = recipe.to_html()
+    assert "<strong>Tip:</strong>" in html
+    assert "**Tip:**" not in html
+
+
+def test_bold_and_italic_in_step_markdown(parser):
+    recipe = parser.parse("**bold** and *italic* text")
+    instructions = recipe.to_markdown().split("## Instructions", 1)[1]
+    assert "**bold** and *italic* text" in instructions
+
+
+def test_plain_text_strips_markdown_markers(parser):
+    recipe = parser.parse("**bold** and *italic* or `code` and [link](https://x.org)")
+    plain = recipe.to_text()
+    assert "**bold**" not in plain
+    assert "**" not in plain.split("Instructions", 1)[-1]
+    assert "`code`" not in plain
+    assert "[link](https://x.org)" not in plain
+    assert "bold and italic or code and link" in plain
+
+
+def test_inline_markdown_html_full(parser):
+    recipe = parser.parse("Use `code`, *em*, and [a link](https://example.com).")
+    html = recipe.to_html()
+    assert "<code>code</code>" in html
+    assert "<em>em</em>" in html
+    assert '<a href="https://example.com">a link</a>' in html
+
+
+def test_inline_markdown_with_ingredient(parser):
+    recipe = parser.parse("**Sift** in @flour{200%g} now.")
+    html = recipe.to_html()
+    assert "**Sift**" not in html
+    assert "<strong>Sift</strong>" in html
+    assert "<strong>200 g flour</strong>" in html
+
+
+def test_bold_spanning_ingredient_token(parser):
+    recipe = parser.parse("Do not rush this step.")
+    step = recipe.steps[0].to_html()
+    assert step
+
+    spanning = parser.parse("**Mix in @salt{1%tbsp} now** and finish.")
+    html = spanning.to_html()
+    assert "**" not in html
+    assert "<strong>Mix in " in html
+    assert "<strong>1 tbsp salt</strong>" in html
+
+
+def test_inline_markdown_in_latex(parser):
+    recipe = parser.parse("**heat** the *oven* and run `sweep` for [x](https://y.net).")
+    latex = recipe.steps[0].to_latex()
+    assert "\\textbf{heat}" in latex
+    assert "\\textit{oven}" in latex
+    assert "\\texttt{sweep}" in latex
