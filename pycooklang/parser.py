@@ -119,6 +119,31 @@ class Ingredient:
             unit = f"{self.unit or ''} " if self.unit else ""
             return f"{qty}{unit}{self.name}{prep}{optional}".strip()
 
+    @property
+    def is_reference(self) -> bool:
+        """True if this ingredient references another recipe.
+
+        References use a path-like name, e.g. ``@./sauces/Hollandaise{}``.
+        """
+        return self.name.startswith(".") or self.name.startswith("/")
+
+    @property
+    def reference_path(self) -> Optional[str]:
+        """Recipe path of a referenced ingredient without the leading ``./``.
+
+        E.g. ``./Dough/Pizza Dough`` -> ``Dough/Pizza Dough``.
+
+        Returns:
+            The relative recipe path, or None for regular ingredients.
+        """
+        if not self.is_reference:
+            return None
+        path = self.name
+        if path.startswith("."):
+            path = path[1:]
+        path = path.lstrip("/\\").strip()
+        return path or None
+
 
 @dataclass
 class Cookware:
@@ -725,6 +750,20 @@ class Recipe:
         for step in self.steps:
             all_ingredients.extend(step.ingredients)
         return self._deduplicate_ingredients(all_ingredients)
+
+    @property
+    def references(self) -> List[Ingredient]:
+        """Get all unique references to other recipes.
+
+        Recipes can be composed by referencing each other, e.g.
+        ``@./sauces/Hollandaise{}``. Deduplicated like :attr:`ingredients`.
+
+        Returns:
+            List of unique reference Ingredients used in the recipe.
+        """
+        return [
+            ingredient for ingredient in self.ingredients if ingredient.is_reference
+        ]
 
     @property
     def cookware(self) -> List[Cookware]:

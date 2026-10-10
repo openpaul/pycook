@@ -327,6 +327,43 @@ def test_period_in_text_is_not_a_reference(parser):
     assert [i.name for i in recipe.ingredients] == ["garlic", "onion"]
 
 
+def test_regular_ingredients_are_not_references(parser):
+    recipe = parser.parse("Add @flour{200%g}, @?salt, and @./sauces/Hollandaise{}.")
+    regular = recipe.ingredients[0], recipe.ingredients[1]
+    for ingredient in regular:
+        assert ingredient.is_reference is False
+        assert ingredient.reference_path is None
+
+
+def test_reference_path_relative(parser):
+    recipe = parser.parse("Use @./Dough/Pizza Dough{}.")
+    ref = recipe.ingredients[0]
+    assert ref.is_reference is True
+    assert ref.reference_path == "Dough/Pizza Dough"
+
+
+def test_reference_path_leading_slash(parser):
+    recipe = parser.parse("Use @/Dough/Pizza Dough{}.")
+    assert recipe.ingredients[0].is_reference is True
+    assert recipe.ingredients[0].reference_path == "Dough/Pizza Dough"
+
+
+def test_recipe_references_property(parser):
+    recipe = parser.parse(
+        "Mix @./Dough/Pizza Dough{} with @./sauces/Hollandaise{} and @salt{}."
+    )
+    assert [r.reference_path for r in recipe.references] == [
+        "Dough/Pizza Dough",
+        "sauces/Hollandaise",
+    ]
+
+
+def test_recipe_references_deduplicated(parser):
+    recipe = parser.parse("Use @./Dough/Pizza Dough{} twice: @./Dough/Pizza Dough{}.")
+    assert len(recipe.references) == 1
+    assert recipe.references[0].reference_path == "Dough/Pizza Dough"
+
+
 # ---------------------------------------------------------------------------
 # Optional ingredients and cookware
 # ---------------------------------------------------------------------------
