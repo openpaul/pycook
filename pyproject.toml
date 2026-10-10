@@ -20,3 +20,4 @@ dev = [
 [tool.pytest.ini_options]
 addopts = "--doctest-modules --doctest-ignore-import-errors"
 testpaths = ["tests", "pycooklang"]
+pythonpath = ["."]
