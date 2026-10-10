@@ -62,6 +62,7 @@ class Ingredient:
         quantity: Amount of ingredient (int, float, or string like "1/2")
         unit: Unit of measurement (e.g., "g", "cups", "tbsp")
         preparation: Preparation method (e.g., "diced", "chopped", "room temperature")
+        optional: True if the ingredient was marked with @? (optional ingredient)
 
     Examples:
         >>> ingredient = Ingredient("flour", 200, "g")
@@ -75,12 +76,17 @@ class Ingredient:
         >>> ingredient = Ingredient("salt")
         >>> str(ingredient)
         'salt'
+
+        >>> ingredient = Ingredient("chilli flakes", 1, "pinch", optional=True)
+        >>> str(ingredient)
+        '1 pinch chilli flakes (optional)'
     """
 
     name: str
     quantity: Optional[Union[int, float, str]] = None
     unit: Optional[str] = None
     preparation: Optional[str] = None
+    optional: bool = False
 
     def __str__(self) -> str:
         result = self.name
@@ -89,6 +95,8 @@ class Ingredient:
         if self.preparation:
             result += f" ({self.preparation})"
         result = result.replace("  ", " ")
+        if self.optional:
+            result += " (optional)"
         return result
 
     def to_latex(self):
@@ -101,14 +109,15 @@ class Ingredient:
             return f"\\ingredient[{self.quantity}]{{{self.unit or ''}}}{{{self.name}}}"
 
     def to_html(self, table: bool = True):
+        optional = " (optional)" if self.optional else ""
         if table:
             prep = f" ({self.preparation})" if self.preparation else ""
-            return f"<tr><td>{self.quantity or ''}</td><td>{self.unit or ''}</td><td>{self.name}{prep}</td></tr>"
+            return f"<tr><td>{self.quantity or ''}</td><td>{self.unit or ''}</td><td>{self.name}{prep}{optional}</td></tr>"
         else:
             prep = f" <em>({self.preparation})</em>" if self.preparation else ""
             qty = f"{self.quantity or ''} " if self.quantity else ""
             unit = f"{self.unit or ''} " if self.unit else ""
-            return f"{qty}{unit}{self.name}{prep}".strip()
+            return f"{qty}{unit}{self.name}{prep}{optional}".strip()
 
 
 @dataclass
@@ -121,6 +130,7 @@ class Cookware:
     Attributes:
         name: The cookware name (e.g., "pot", "mixing bowl", "baking sheet")
         quantity: Number of items needed (e.g., 2, "large")
+        optional: True if the cookware was marked with #? (optional cookware)
 
     Examples:
         >>> cookware = Cookware("pot")
@@ -130,15 +140,21 @@ class Cookware:
         >>> cookware = Cookware("mixing bowl", 2)
         >>> str(cookware)
         '2 mixing bowl'
+
+        >>> cookware = Cookware("splatter guard", optional=True)
+        >>> str(cookware)
+        'splatter guard (optional)'
     """
 
     name: str
     quantity: Optional[Union[int, str]] = None
+    optional: bool = False
 
     def __str__(self) -> str:
+        name = self.name + (" (optional)" if self.optional else "")
         if self.quantity:
-            return f"{self.quantity} {self.name}"
-        return self.name
+            return f"{self.quantity} {name}"
+        return name
 
 
 @dataclass
@@ -330,6 +346,8 @@ class IngredientToken(Token):
         if self.ingredient.preparation:
             result += f" *({self.ingredient.preparation})*"
         result = result.replace("  ", " ")
+        if self.ingredient.optional:
+            result += " *(optional)*"
         return result
 
     def to_plain_text(self) -> str:
@@ -341,6 +359,8 @@ class IngredientToken(Token):
             result = f"<strong>{self.ingredient.quantity} {self.ingredient.unit or ''} {self.ingredient.name}</strong>".strip()
         if self.ingredient.preparation:
             result += f" <em>({self.ingredient.preparation})</em>"
+        if self.ingredient.optional:
+            result += " <em>(optional)</em>"
         return result
 
     def to_latex(self) -> str:
@@ -377,15 +397,22 @@ class CookwareToken(Token):
     cookware: Cookware
 
     def to_markdown(self) -> str:
-        return f"*{self.cookware.name}*"
+        result = f"*{self.cookware.name}*"
+        if self.cookware.optional:
+            result += " *(optional)*"
+        return result
 
     def to_plain_text(self) -> str:
         return str(self.cookware)
 
     def to_html(self) -> str:
         if self.cookware.quantity:
-            return f"<em>{self.cookware.quantity} {self.cookware.name}</em>"
-        return f"<em>{self.cookware.name}</em>"
+            result = f"<em>{self.cookware.quantity} {self.cookware.name}</em>"
+        else:
+            result = f"<em>{self.cookware.name}</em>"
+        if self.cookware.optional:
+            result += " (optional)"
+        return result
 
     def to_latex(self) -> str:
         if self.cookware.quantity:
@@ -687,7 +714,9 @@ class Recipe:
         """Get all unique ingredients from all recipe steps.
 
         Collects ingredients from all steps and removes duplicates while
-        preserving order of first occurrence.
+        preserving order of first occurrence. Optionality belongs to each
+        occurrence, so required and optional uses of the same ingredient
+        are kept as separate entries.
 
         Returns:
             List of unique Ingredient objects used in the recipe.
@@ -996,6 +1025,7 @@ class Recipe:
                 ingredient.unit,
                 ingredient.preparation,
                 ingredient.quantity,
+                ingredient.optional,
             )
             if key not in seen:
                 seen.add(key)
@@ -1014,8 +1044,9 @@ class Recipe:
         seen = set()
         result = []
         for item in cookware:
-            if item.name not in seen:
-                seen.add(item.name)
+            key = (item.name, item.optional)
+            if key not in seen:
+                seen.add(key)
                 result.append(item)
         return result
 
@@ -1114,24 +1145,43 @@ class CooklangParser:
         self._setup_regex()
 
     def _get_matching_regex(
-        self, qualifier: str, required_name: bool = True, also_simple: bool = True
+        self,
+        qualifier: str,
+        required_name: bool = True,
+        also_simple: bool = True,
+        optional: bool = False,
     ) -> re.Pattern:
-        # (?:~(?P<name>[\w\s()\\/\\-]){(?P<amount>[\d.\/\-]+)?%*(?P<unit>[A-Za-z]+)?}(?:\((?P<shorthand>[\w\s]+)\))?)|(?:~(?P<simple>\w+))
+        """Build the regex matching one sigil (@, # or ~).
+
+        Args:
+            qualifier: The sigil starting the markup.
+            required_name: Whether the braced form must carry a name
+                (timers may have an empty name: ~{25%minutes}).
+            also_simple: Whether the braced-less form (e.g. @salt) matches.
+            optional: Whether a "?" may follow the sigil directly to mark
+                the ingredient or cookware as optional. "@? thyme" is not
+                matched, the marker must not be followed by a space.
+        """
+        sigil = re.escape(qualifier)
+        marker = r"(?:\?(?=\S))?" if optional else ""
+        # A dot only belongs to a name when it is not followed by
+        # whitespace, so recipe references like @./sauces/Hollandaise{}
+        # parse while a full stop ending a sentence does not.
+        name = r"(?:[\w\s()/\\-]|\.(?!\s))"
+        quantifier = "+" if required_name else "*"
+
         regex_pattern = r"(?:"
-        regex_pattern += re.escape(qualifier)
-        regex_pattern += r"(?P<name>[\w\s()\\/\\-]"
-        regex_pattern += r"+" if required_name else r"*"
-        regex_pattern += r"){(?P<amount>[\d.\/\-]+)?%*(?P<unit>[A-Za-z]+)?}(?:\((?P<shorthand>[\w\s.:]+)\))?)"
+        regex_pattern += sigil + marker + f"(?P<name>{name}{quantifier})"
+        regex_pattern += r"{(?P<amount>[\d.\/\-]+)?%*(?P<unit>[A-Za-z]+)?}(?:\((?P<shorthand>[\w\s.:]+)\))?)"
         if also_simple:
             regex_pattern += "|(?:"
-            regex_pattern += re.escape(qualifier)
-            regex_pattern += r"(?P<simple>\w+))"
+            regex_pattern += sigil + marker + r"(?P<simple>\w+))"
 
         return re.compile(regex_pattern)
 
     def _setup_regex(self):
-        self.ingredient_pattern = self._get_matching_regex(r"@")
-        self.cookware_pattern = self._get_matching_regex(r"#")
+        self.ingredient_pattern = self._get_matching_regex(r"@", optional=True)
+        self.cookware_pattern = self._get_matching_regex(r"#", optional=True)
         self.timer_pattern = self._get_matching_regex(
             r"~", required_name=False, also_simple=False
         )
@@ -1148,6 +1198,10 @@ class CooklangParser:
 
         # Extract and parse metadata (YAML front matter)
         text, recipe.metadata = self._parse_metadata(text)
+
+        # A backslash at the end of a line forces a line break within the
+        # step, it is replaced by the newline character
+        text = re.sub(r"\\(\r?\n)", r"\1", text)
 
         # Set title from metadata if available
         recipe.title = recipe.metadata.get("title")
@@ -1254,6 +1308,11 @@ class CooklangParser:
 
         # Build tokens, filling gaps with text tokens
         for start, end, data, original_text in all_matches:
+            # The first match at a position wins: a comment swallows the
+            # rest of its line (or block), so markup inside a comment is
+            # left as plain text instead of being tokenized twice.
+            if start < position:
+                continue
             # Add text token for any gap before this match
             if position < start:
                 gap_text = text[position:start]
@@ -1313,8 +1372,9 @@ class CooklangParser:
 
     def _create_ingredient_from_match(self, match) -> Ingredient:
         """Create an Ingredient object from a regex match"""
+        optional = match.group(0).startswith("@?")
         if match.group("simple"):
-            return Ingredient(name=match.group("simple").strip())
+            return Ingredient(name=match.group("simple").strip(), optional=optional)
 
         name = match.group("name").strip()
 
@@ -1327,16 +1387,21 @@ class CooklangParser:
             quantity = _parse_number(quantity_str)
 
         return Ingredient(
-            name=name, quantity=quantity, unit=unit, preparation=preparation
+            name=name,
+            quantity=quantity,
+            unit=unit,
+            preparation=preparation,
+            optional=optional,
         )
 
     def _create_cookware_from_match(self, match) -> Cookware:
         """Create a Cookware object from a regex match"""
+        optional = match.group(0).startswith("#?")
         if match.group("simple"):
-            return Cookware(name=match.group("simple").strip())
+            return Cookware(name=match.group("simple").strip(), optional=optional)
         name = match.group("name").strip()
         quantity = match.group("amount") if match.group("amount") else None
-        return Cookware(name=name, quantity=quantity)
+        return Cookware(name=name, quantity=quantity, optional=optional)
 
     def _create_timer_from_match(self, match) -> Timer:
         """Create a Timer object from a regex match"""
